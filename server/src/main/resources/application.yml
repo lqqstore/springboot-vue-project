@@ -1,0 +1,35 @@
+server:
+  port: 8080
+spring:
+  application:
+    name: dms-server
+  datasource:
+    # TODO: 修改为你的 MySQL 连接信息
+    url: jdbc:mysql://localhost:3306/dms?allowPublicKeyRetrieval=true&useUnicode=true&characterEncoding=utf8&useSSL=false&serverTimezone=Asia/Shanghai
+    username: root
+    password: root
+    driver-class-name: com.mysql.cj.jdbc.Driver
+
+  # MyBatis-Plus 基础配置（Mapper XML 放在 resources/mapper 下）
+  # 具体包扫描与类型别名会在后续 Phase2/Phase3 中继续完善
+  jackson:
+    time-zone: Asia/Shanghai
+
+mybatis-plus:
+  mapper-locations: classpath:/mapper/**/*.xml
+  # type-aliases-package 先不强制配置，避免路径写法不兼容；后续按需要再补
+
+# Sa-Token（后续 Phase2 会进一步完善鉴权策略）
+sa-token:
+  token-name: Authorization
+  header: Authorization
+
+# Knife4j（Swagger）开关
+knife4j:
+  enable: true
+
+logging:
+  level:
+    root: INFO               # 根日志级别，可根据需要改为 DEBUG 查看更多细节
+    com.dms: DEBUG           # 你的项目包名，设为 DEBUG 会输出调试信息
+    cn.dev33.satoken: DEBUG  # Sa-Token 的日志，有助于查看 token 验证过程
