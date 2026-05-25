@@ -7,6 +7,7 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.dms.common.Result;
 import com.dms.modules.dorm.dto.DormRoomAddRequestDTO;
 import com.dms.modules.dorm.dto.DormRoomUpdateRequestDTO;
+import com.dms.modules.dorm.dto.DormRoomVO;
 import com.dms.modules.dorm.entity.DormRoom;
 import com.dms.modules.dorm.service.DormRoomService;
 import jakarta.validation.Valid;
@@ -25,29 +26,25 @@ public class DormRoomController {
     private final DormRoomService dormRoomService;
 
     @GetMapping("/page")
-    public Result<Page<DormRoom>> page(
+    public Result<Page<DormRoomVO>> page(
             @RequestParam(defaultValue = "1") long current,
             @RequestParam(defaultValue = "10") long size,
             @RequestParam(required = false) Long buildingId,
             @RequestParam(required = false) String roomNumber
     ) {
         Page<DormRoom> page = new Page<>(current, size);
-
-        LambdaQueryWrapper<DormRoom> wrapper = new LambdaQueryWrapper<>();
-        if (buildingId != null) {
-            wrapper.eq(DormRoom::getBuildingId, buildingId);
-        }
-        if (StrUtil.isNotBlank(roomNumber)) {
-            wrapper.like(DormRoom::getRoomNumber, roomNumber.trim());
-        }
-
-        Page<DormRoom> result = dormRoomService.page(page, wrapper);
+        Page<DormRoomVO> result = dormRoomService.getRoomPageWithDuty(page, buildingId, roomNumber);
         return Result.success(result);
     }
 
     @GetMapping("/list")
     public Result<List<DormRoom>> list() {
         return Result.success(dormRoomService.list());
+    }
+
+    @GetMapping("/available")
+    public Result<List<DormRoomVO>> availableRooms() {
+        return Result.success(dormRoomService.getAvailableRooms());
     }
 
     @PostMapping

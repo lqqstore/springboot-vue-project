@@ -166,5 +166,26 @@ INSERT INTO dorm_room (building_id, room_number, capacity, current_count)
 SELECT 1, '301', 6, 0 FROM DUAL
 WHERE NOT EXISTS (SELECT 1 FROM dorm_room WHERE building_id = 1 AND room_number = '301');
 
+-- =========================
+-- 8) room_duty - 值日生表
+-- =========================
+CREATE TABLE IF NOT EXISTS room_duty (
+  id BIGINT NOT NULL AUTO_INCREMENT,
+  room_id BIGINT NOT NULL COMMENT '房间ID',
+  student_id BIGINT NOT NULL COMMENT '学生ID',
+  duty_date DATE NOT NULL COMMENT '值日日期',
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+  PRIMARY KEY (id),
+  UNIQUE KEY uk_room_date (room_id, duty_date),
+  KEY idx_room_id (room_id),
+  KEY idx_duty_date (duty_date),
+  CONSTRAINT fk_room_duty_room
+    FOREIGN KEY (room_id) REFERENCES dorm_room (id)
+    ON UPDATE CASCADE ON DELETE CASCADE,
+  CONSTRAINT fk_room_duty_student
+    FOREIGN KEY (student_id) REFERENCES student (id)
+    ON UPDATE CASCADE ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
 SET FOREIGN_KEY_CHECKS = 1;
 

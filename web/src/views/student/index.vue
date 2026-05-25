@@ -86,8 +86,15 @@
         <el-form-item label="学生ID" disabled>
           <el-input v-model.number="assignForm.studentId" />
         </el-form-item>
-        <el-form-item label="房间ID" prop="roomId">
-          <el-input v-model.number="assignForm.roomId" placeholder="请输入房间ID" />
+        <el-form-item label="选择房间" prop="roomId">
+          <el-select v-model.number="assignForm.roomId" placeholder="请选择房间" style="width: 100%;">
+            <el-option
+              v-for="room in availableRooms"
+              :key="room.id"
+              :label="`${room.buildingName} - ${room.roomNumber} (${room.currentCount}/${room.capacity})`"
+              :value="room.id"
+            />
+          </el-select>
         </el-form-item>
         <el-form-item label="入住日期" prop="checkInDate">
           <el-date-picker
@@ -119,6 +126,7 @@ import { ref, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import type { FormInstance, FormRules } from 'element-plus'
 import { studentApi } from '@/api/student'
+import { getAvailableRooms, type DormRoomVO } from '@/api/dorm'
 
 interface Student {
   id: number
@@ -152,6 +160,7 @@ const formRef = ref<FormInstance | null>(null)
 const assignFormRef = ref<FormInstance | null>(null)
 const loading = ref(false)
 const assignLoading = ref(false)
+const availableRooms = ref<DormRoomVO[]>([])
 
 const form = ref<Form>({
   name: '',
@@ -281,8 +290,21 @@ const handleDelete = async (id: number) => {
   }
 }
 
+// 加载可分配房间
+const loadAvailableRooms = async () => {
+  try {
+    const res = await getAvailableRooms()
+    if (res.data.code === 0) {
+      availableRooms.value = res.data.data || []
+    }
+  } catch (e) {
+    console.error('加载可分配房间失败', e)
+  }
+}
+
 // 分配宿舍
-const handleAssignDorm = (row: Student) => {
+const handleAssignDorm = async (row: Student) => {
+  await loadAvailableRooms()
   assignForm.value = {
     studentId: row.id,
     roomId: 0,

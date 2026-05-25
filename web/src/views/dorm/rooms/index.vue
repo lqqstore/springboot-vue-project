@@ -42,13 +42,14 @@
 
         <el-table :data="tableData" border stripe style="width: 100%;">
           <el-table-column prop="roomNumber" label="房间号" width="140" />
-          <el-table-column label="楼栋" width="180">
-            <template #default="{ row }">
-              {{ buildingName(row.buildingId) }}
-            </template>
-          </el-table-column>
+          <el-table-column prop="buildingName" label="楼栋" width="180" />
           <el-table-column prop="capacity" label="容量" width="120" />
           <el-table-column prop="currentCount" label="当前入住数" width="150" />
+          <el-table-column label="当日值日生" width="180">
+            <template #default="{ row }">
+              {{ row.dutyStudentName || '-' }}
+            </template>
+          </el-table-column>
 
           <el-table-column label="操作" width="220" fixed="right">
             <template #default="{ row }">
@@ -133,7 +134,7 @@
 import { onMounted, reactive, ref, computed } from 'vue'
 import type { FormInstance, FormRules } from 'element-plus'
 import { ElMessage } from 'element-plus'
-import type { DormBuilding, DormRoom, PageResult } from '@/api/dorm'
+import type { DormBuilding, DormRoomVO, PageResult } from '@/api/dorm'
 import { createRoom, deleteRoom, getBuildingsList, getRoomsPage, updateRoom } from '@/api/dorm'
 
 type RoomForm = {
@@ -145,7 +146,7 @@ type RoomForm = {
 }
 
 const buildings = ref<DormBuilding[]>([])
-const tableData = ref<DormRoom[]>([])
+const tableData = ref<DormRoomVO[]>([])
 
 const dialogVisible = ref(false)
 const dialogTitle = computed(() => (form.value.id ? '编辑房间' : '新增房间'))
@@ -198,7 +199,7 @@ const loadRooms = async () => {
   if (body.code !== 0) {
     throw new Error(body.msg || '加载房间失败')
   }
-  const page = body.data as PageResult<DormRoom>
+  const page = body.data as PageResult<DormRoomVO>
   tableData.value = page.records || []
   total.value = page.total || 0
 }

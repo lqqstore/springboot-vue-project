@@ -14,6 +14,17 @@ export interface DormRoom {
   currentCount: number
 }
 
+export interface DormRoomVO {
+  id: number
+  buildingId: number
+  roomNumber: string
+  capacity: number
+  currentCount: number
+  buildingName: string
+  dutyStudentId?: number
+  dutyStudentName?: string
+}
+
 export interface PageResult<T> {
   total: number
   size: number
@@ -31,7 +42,11 @@ export function getRoomsPage(params: {
   buildingId?: number
   roomNumber?: string
 }) {
-  return request.get<Result<PageResult<DormRoom>>>('/dorm/rooms/page', { params })
+  return request.get<Result<PageResult<DormRoomVO>>>('/dorm/rooms/page', { params })
+}
+
+export function getAvailableRooms() {
+  return request.get<Result<DormRoomVO[]>>('/dorm/rooms/available')
 }
 
 export function createRoom(data: {
