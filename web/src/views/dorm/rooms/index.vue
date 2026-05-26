@@ -1,139 +1,177 @@
 <template>
-  <el-container>
-    <el-main>
-      <el-card shadow="never">
-        <div class="toolbar">
-          <el-form :inline="true" :model="query" class="search-form">
-            <el-form-item label="楼栋">
-              <el-select
-                v-model="query.buildingId"
-                placeholder="全部楼栋"
-                style="width: 180px;"
-                clearable
-              >
-                <el-option
-                  v-for="b in buildings"
-                  :key="b.id"
-                  :label="b.name"
-                  :value="b.id"
-                />
-              </el-select>
-            </el-form-item>
+  <div class="page-wrap">
+    <div class="page-header">
+      <div class="page-title">
+        <el-icon :size="22"><House /></el-icon>
+        <span>房间管理</span>
+      </div>
+      <el-button type="primary" :icon="Plus" @click="openAdd">新增房间</el-button>
+    </div>
 
-            <el-form-item label="房间号">
-              <el-input
-                v-model="query.roomNumber"
-                placeholder="如 301"
-                style="width: 180px;"
-                clearable
-              />
-            </el-form-item>
-
-            <el-form-item>
-              <el-button type="primary" @click="onSearch">搜索</el-button>
-              <el-button @click="onReset">重置</el-button>
-            </el-form-item>
-          </el-form>
-        </div>
-
-        <div style="margin: 12px 0;">
-          <el-button type="primary" @click="openAdd">新增房间</el-button>
-        </div>
-
-        <el-table :data="tableData" border stripe style="width: 100%;">
-          <el-table-column prop="roomNumber" label="房间号" width="140" />
-          <el-table-column prop="buildingName" label="楼栋" width="180" />
-          <el-table-column prop="capacity" label="容量" width="120" />
-          <el-table-column prop="currentCount" label="当前入住数" width="150" />
-          <el-table-column label="当日值日生" width="180">
-            <template #default="{ row }">
-              {{ row.dutyStudentName || '-' }}
-            </template>
-          </el-table-column>
-
-          <el-table-column label="操作" width="220" fixed="right">
-            <template #default="{ row }">
-              <el-button link type="primary" @click="openEdit(row)">编辑</el-button>
-              <el-popconfirm
-                title="确定删除该房间？"
-                confirm-button-text="确定"
-                cancel-button-text="取消"
-                @confirm="onDelete(row.id)"
-              >
-                <template #reference>
-                  <el-button link type="danger">删除</el-button>
-                </template>
-              </el-popconfirm>
-            </template>
-          </el-table-column>
-        </el-table>
-
-        <div style="margin-top: 16px; display: flex; justify-content: flex-end;">
-          <el-pagination
-            background
-            layout="prev, pager, next, total"
-            :total="total"
-            :page-size="query.size"
-            :current-page="query.current"
-            @current-change="onPageChange"
+    <el-card shadow="never" class="search-card">
+      <el-form :inline="true" :model="query" class="search-form">
+        <el-form-item label="楼栋">
+          <el-select
+            v-model="query.buildingId"
+            placeholder="全部楼栋"
+            style="width: 180px;"
+            clearable
+          >
+            <el-option
+              v-for="b in buildings"
+              :key="b.id"
+              :label="b.name"
+              :value="b.id"
+            />
+          </el-select>
+        </el-form-item>
+        <el-form-item label="房间号">
+          <el-input
+            v-model="query.roomNumber"
+            placeholder="如 301"
+            style="width: 180px;"
+            clearable
+            :prefix-icon="Search"
+            @keyup.enter="onSearch"
           />
-        </div>
-      </el-card>
+        </el-form-item>
+        <el-form-item>
+          <el-button type="primary" :icon="Search" @click="onSearch">搜索</el-button>
+          <el-button :icon="RefreshRight" @click="onReset">重置</el-button>
+        </el-form-item>
+      </el-form>
+    </el-card>
 
-      <el-dialog
-        v-model="dialogVisible"
-        :title="dialogTitle"
-        width="520px"
-        destroy-on-close
+    <el-card shadow="never" class="table-card">
+      <el-table
+        v-loading="loading"
+        :data="tableData"
+        border
+        stripe
+        style="width: 100%;"
+        empty-text="暂无房间数据"
+        :header-cell-style="{ background: '#fafafa', color: '#303133', fontWeight: 600 }"
       >
-        <el-form
-          ref="formRef"
-          :model="form"
-          :rules="rules"
-          label-width="90px"
-          size="large"
-        >
-          <el-form-item label="楼栋" prop="buildingId">
-            <el-select v-model="form.buildingId" placeholder="请选择楼栋" style="width: 100%;">
-              <el-option
-                v-for="b in buildings"
-                :key="b.id"
-                :label="b.name"
-                :value="b.id"
+        <el-table-column prop="roomNumber" label="房间号" width="120" />
+        <el-table-column prop="buildingName" label="所属楼栋" width="180">
+          <template #default="{ row }">
+            <div class="cell-building">
+              <el-icon color="#409eff"><OfficeBuilding /></el-icon>
+              <span>{{ row.buildingName }}</span>
+            </div>
+          </template>
+        </el-table-column>
+        <el-table-column prop="capacity" label="容量" width="100" align="center">
+          <template #default="{ row }">
+            <el-tag type="info" effect="plain" round>{{ row.capacity }}</el-tag>
+          </template>
+        </el-table-column>
+        <el-table-column prop="currentCount" label="当前入住" width="120" align="center">
+          <template #default="{ row }">
+            <div class="cell-count">
+              <el-progress
+                :percentage="row.capacity ? Math.round(row.currentCount / row.capacity * 100) : 0"
+                :stroke-width="8"
+                :color="row.currentCount >= row.capacity ? '#f56c6c' : row.currentCount / row.capacity > 0.8 ? '#e6a23c' : '#67c23a'"
+                :show-text="false"
+                style="width: 80px;"
               />
-            </el-select>
-          </el-form-item>
+              <span class="count-text" :class="{ 'count-full': row.currentCount >= row.capacity }">
+                {{ row.currentCount }}/{{ row.capacity }}
+              </span>
+            </div>
+          </template>
+        </el-table-column>
+        <el-table-column label="当日值日生" width="140">
+          <template #default="{ row }">
+            <span v-if="row.dutyStudentName" class="cell-duty">
+              <el-icon color="#e6a23c"><StarFilled /></el-icon>
+              {{ row.dutyStudentName }}
+            </span>
+            <span v-else class="cell-duty-empty">-</span>
+          </template>
+        </el-table-column>
+        <el-table-column label="操作" width="200" fixed="right" align="center">
+          <template #default="{ row }">
+            <el-button link type="primary" :icon="Edit" @click="openEdit(row)">编辑</el-button>
+            <el-popconfirm
+              title="确定删除该房间？"
+              confirm-button-text="确定"
+              cancel-button-text="取消"
+              @confirm="onDelete(row.id)"
+            >
+              <template #reference>
+                <el-button link type="danger" :icon="Delete">删除</el-button>
+              </template>
+            </el-popconfirm>
+          </template>
+        </el-table-column>
+      </el-table>
 
-          <el-form-item label="房间号" prop="roomNumber">
-            <el-input v-model="form.roomNumber" placeholder="如 301" />
-          </el-form-item>
+      <div class="pagination-wrap">
+        <el-pagination
+          background
+          layout="prev, pager, next, total"
+          :total="total"
+          :page-size="query.size"
+          :current-page="query.current"
+          @current-change="onPageChange"
+        />
+      </div>
+    </el-card>
 
-          <el-form-item label="容量" prop="capacity">
-            <el-input-number v-model="form.capacity" :min="1" style="width: 100%;" />
-          </el-form-item>
+    <el-dialog
+      v-model="dialogVisible"
+      :title="dialogTitle"
+      width="520px"
+      destroy-on-close
+      :close-on-click-modal="false"
+    >
+      <el-form
+        ref="formRef"
+        :model="form"
+        :rules="rules"
+        label-width="100px"
+        size="large"
+      >
+        <el-form-item label="楼栋" prop="buildingId">
+          <el-select v-model="form.buildingId" placeholder="请选择楼栋" style="width: 100%;">
+            <el-option
+              v-for="b in buildings"
+              :key="b.id"
+              :label="b.name"
+              :value="b.id"
+            />
+          </el-select>
+        </el-form-item>
+        <el-form-item label="房间号" prop="roomNumber">
+          <el-input v-model="form.roomNumber" placeholder="如 301" :prefix-icon="House" />
+        </el-form-item>
+        <el-form-item label="容量" prop="capacity">
+          <el-input-number v-model="form.capacity" :min="1" style="width: 100%;" />
+        </el-form-item>
+        <el-form-item label="当前入住数" prop="currentCount">
+          <el-input-number v-model="form.currentCount" :min="0" style="width: 100%;" />
+        </el-form-item>
+      </el-form>
 
-          <el-form-item label="当前入住数" prop="currentCount">
-            <el-input-number v-model="form.currentCount" :min="0" style="width: 100%;" />
-          </el-form-item>
-        </el-form>
-
-        <template #footer>
-          <span class="dialog-footer">
-            <el-button @click="dialogVisible = false">取消</el-button>
-            <el-button type="primary" :loading="saving" @click="onSave">
-              保存
-            </el-button>
-          </span>
-        </template>
-      </el-dialog>
-    </el-main>
-  </el-container>
+      <template #footer>
+        <div class="dialog-footer">
+          <el-button @click="dialogVisible = false">取消</el-button>
+          <el-button type="primary" :loading="saving" :icon="Check" @click="onSave">保存</el-button>
+        </div>
+      </template>
+    </el-dialog>
+  </div>
 </template>
 
 <script setup lang="ts">
 import { onMounted, reactive, ref, computed } from 'vue'
 import type { FormInstance, FormRules } from 'element-plus'
 import { ElMessage } from 'element-plus'
+import {
+  House, OfficeBuilding, Search, RefreshRight, Plus, Edit, Delete, Check, StarFilled
+} from '@element-plus/icons-vue'
 import type { DormBuilding, DormRoomVO, PageResult } from '@/api/dorm'
 import { createRoom, deleteRoom, getBuildingsList, getRoomsPage, updateRoom } from '@/api/dorm'
 
@@ -147,6 +185,7 @@ type RoomForm = {
 
 const buildings = ref<DormBuilding[]>([])
 const tableData = ref<DormRoomVO[]>([])
+const loading = ref(false)
 
 const dialogVisible = ref(false)
 const dialogTitle = computed(() => (form.value.id ? '编辑房间' : '新增房间'))
@@ -177,10 +216,6 @@ const rules = reactive<FormRules>({
   currentCount: [{ required: true, message: '请输入当前入住数', trigger: 'change' }]
 })
 
-const buildingName = (buildingId: number) => {
-  return buildings.value.find((b) => b.id === buildingId)?.name || '-'
-}
-
 const loadBuildings = async () => {
   const res = await getBuildingsList()
   const body = res.data
@@ -189,40 +224,41 @@ const loadBuildings = async () => {
 }
 
 const loadRooms = async () => {
-  const res = await getRoomsPage({
-    current: query.current,
-    size: query.size,
-    buildingId: query.buildingId,
-    roomNumber: query.roomNumber || undefined
-  })
-  const body = res.data
-  if (body.code !== 0) {
-    throw new Error(body.msg || '加载房间失败')
+  loading.value = true
+  try {
+    const res = await getRoomsPage({
+      current: query.current,
+      size: query.size,
+      buildingId: query.buildingId,
+      roomNumber: query.roomNumber || undefined
+    })
+    const body = res.data
+    if (body.code !== 0) throw new Error(body.msg || '加载房间失败')
+    const page = body.data as PageResult<DormRoomVO>
+    tableData.value = page.records || []
+    total.value = page.total || 0
+  } catch (e: any) {
+    ElMessage.error(e?.message || '加载房间失败')
+  } finally {
+    loading.value = false
   }
-  const page = body.data as PageResult<DormRoomVO>
-  tableData.value = page.records || []
-  total.value = page.total || 0
 }
 
 const onSearch = async () => {
   query.current = 1
-  try {
-    await loadRooms()
-  } catch (e: any) {
-    ElMessage.error(e?.message || '搜索失败')
-  }
+  await loadRooms()
 }
 
 const onReset = () => {
   query.buildingId = undefined
   query.roomNumber = ''
   query.current = 1
-  void onSearch()
+  void loadRooms()
 }
 
 const onPageChange = (page: number) => {
   query.current = page
-  void loadRooms().catch((e: any) => ElMessage.error(e?.message || '分页失败'))
+  void loadRooms()
 }
 
 const openAdd = () => {
@@ -236,7 +272,7 @@ const openAdd = () => {
   dialogVisible.value = true
 }
 
-const openEdit = (row: DormRoom) => {
+const openEdit = (row: DormRoomVO) => {
   form.value = {
     id: row.id,
     buildingId: row.buildingId,
@@ -304,12 +340,64 @@ onMounted(async () => {
 </script>
 
 <style scoped>
-.toolbar {
-  margin-bottom: 8px;
+.page-wrap {
+  max-width: 1300px;
 }
 
-.search-form {
-  margin-bottom: 4px;
+.page-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 16px;
+}
+
+.page-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 18px;
+  font-weight: 600;
+  color: #303133;
+}
+
+.search-card {
+  margin-bottom: 16px;
+}
+
+.cell-building {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.cell-count {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.count-text {
+  font-size: 13px;
+  color: #67c23a;
+  font-weight: 500;
+}
+
+.count-text.count-full {
+  color: #f56c6c;
+}
+
+.cell-duty {
+  color: #303133;
+}
+
+.cell-duty-empty {
+  color: #c0c4cc;
+}
+
+.pagination-wrap {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 16px;
 }
 
 .dialog-footer {
@@ -318,4 +406,3 @@ onMounted(async () => {
   gap: 12px;
 }
 </style>
-

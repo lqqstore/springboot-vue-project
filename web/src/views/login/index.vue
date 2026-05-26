@@ -1,25 +1,42 @@
 <template>
   <div class="login-wrap">
+    <div class="login-bg-shapes">
+      <div class="shape shape-1" />
+      <div class="shape shape-2" />
+      <div class="shape shape-3" />
+    </div>
+
     <div class="login-card">
-      <div class="login-title">宿舍管理系统</div>
+      <div class="login-brand">
+        <div class="brand-icon">
+          <el-icon :size="36"><HomeFilled /></el-icon>
+        </div>
+        <h1 class="brand-title">宿舍管理系统</h1>
+        <p class="brand-subtitle">Dormitory Management System</p>
+      </div>
 
       <el-form
         ref="formRef"
         :model="form"
         :rules="rules"
-        label-width="80px"
         size="large"
       >
-        <el-form-item label="用户名" prop="username">
-          <el-input v-model="form.username" placeholder="请输入用户名" />
+        <el-form-item prop="username">
+          <el-input
+            v-model="form.username"
+            placeholder="请输入用户名"
+            :prefix-icon="User"
+          />
         </el-form-item>
 
-        <el-form-item label="密码" prop="password">
+        <el-form-item prop="password">
           <el-input
             v-model="form.password"
             placeholder="请输入密码"
             type="password"
             show-password
+            :prefix-icon="Lock"
+            @keyup.enter="onSubmit"
           />
         </el-form-item>
 
@@ -27,13 +44,18 @@
           <el-button
             type="primary"
             :loading="loading"
-            style="width: 100%;"
+            class="login-btn"
+            round
             @click="onSubmit"
           >
-            登录
+            登 录
           </el-button>
         </el-form-item>
       </el-form>
+    </div>
+
+    <div class="login-footer">
+      <span>&copy; {{ new Date().getFullYear() }} DMS. All rights reserved.</span>
     </div>
   </div>
 </template>
@@ -43,6 +65,7 @@ import { reactive, ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import type { FormInstance, FormRules } from 'element-plus'
 import { ElMessage } from 'element-plus'
+import { HomeFilled, User, Lock } from '@element-plus/icons-vue'
 import request, { type Result } from '@/utils/request'
 import { useUserStore, type UserInfo } from '@/stores/user'
 
@@ -69,7 +92,6 @@ const rules = reactive<FormRules>({
 })
 
 onMounted(() => {
-  // 确保刷新后能恢复登录态
   userStore.hydrate()
 })
 
@@ -107,26 +129,110 @@ const onSubmit = () => {
 
 <style scoped>
 .login-wrap {
+  position: relative;
   min-height: 100vh;
   display: flex;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
-  background: #f6f7fb;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  overflow: hidden;
+}
+
+.login-bg-shapes {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.shape {
+  position: absolute;
+  border-radius: 50%;
+  opacity: 0.1;
+  background: #fff;
+}
+
+.shape-1 {
+  width: 500px;
+  height: 500px;
+  top: -150px;
+  right: -100px;
+  animation: float 8s ease-in-out infinite;
+}
+
+.shape-2 {
+  width: 300px;
+  height: 300px;
+  bottom: -80px;
+  left: -60px;
+  animation: float 6s ease-in-out infinite reverse;
+}
+
+.shape-3 {
+  width: 200px;
+  height: 200px;
+  top: 40%;
+  left: 60%;
+  animation: float 10s ease-in-out infinite;
+}
+
+@keyframes float {
+  0%, 100% { transform: translateY(0) scale(1); }
+  50% { transform: translateY(-20px) scale(1.05); }
 }
 
 .login-card {
+  position: relative;
   width: 420px;
-  padding: 26px 24px;
-  background: #fff;
-  border-radius: 10px;
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
+  padding: 40px 36px 32px;
+  background: rgba(255, 255, 255, 0.95);
+  border-radius: 16px;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.15);
+  backdrop-filter: blur(10px);
 }
 
-.login-title {
-  font-size: 20px;
-  font-weight: 700;
-  margin-bottom: 20px;
+.login-brand {
   text-align: center;
+  margin-bottom: 32px;
+}
+
+.brand-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 64px;
+  height: 64px;
+  border-radius: 16px;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: #fff;
+  margin-bottom: 16px;
+}
+
+.brand-title {
+  margin: 0;
+  font-size: 24px;
+  font-weight: 700;
+  color: #303133;
+}
+
+.brand-subtitle {
+  margin: 6px 0 0;
+  font-size: 13px;
+  color: #909399;
+  letter-spacing: 1px;
+}
+
+.login-btn {
+  width: 100%;
+  height: 44px;
+  font-size: 16px;
+  letter-spacing: 4px;
+}
+
+.login-footer {
+  position: absolute;
+  bottom: 16px;
+  color: rgba(255, 255, 255, 0.6);
+  font-size: 12px;
 }
 </style>
-

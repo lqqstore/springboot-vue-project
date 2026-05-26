@@ -1,101 +1,124 @@
 <template>
-  <el-container>
-    <el-main>
-      <el-card shadow="never">
-        <div class="toolbar">
-          <el-form :inline="true" :model="query" class="search-form">
-            <el-form-item label="楼栋名称">
-              <el-input
-                v-model="query.name"
-                placeholder="如 1号楼"
-                style="width: 200px;"
-                clearable
-              />
-            </el-form-item>
+  <div class="page-wrap">
+    <div class="page-header">
+      <div class="page-title">
+        <el-icon :size="22"><OfficeBuilding /></el-icon>
+        <span>楼栋管理</span>
+      </div>
+      <el-button type="primary" :icon="Plus" @click="openAdd">新增楼栋</el-button>
+    </div>
 
-            <el-form-item>
-              <el-button type="primary" @click="onSearch">搜索</el-button>
-              <el-button @click="onReset">重置</el-button>
-            </el-form-item>
-          </el-form>
-        </div>
-
-        <div style="margin: 12px 0;">
-          <el-button type="primary" @click="openAdd">新增楼栋</el-button>
-        </div>
-
-        <el-table :data="tableData" border stripe style="width: 100%;">
-          <el-table-column prop="name" label="楼栋名称" min-width="180" />
-          <el-table-column prop="location" label="位置" min-width="220" />
-
-          <el-table-column label="操作" width="220" fixed="right">
-            <template #default="{ row }">
-              <el-button link type="primary" @click="openEdit(row)">编辑</el-button>
-              <el-popconfirm
-                title="确定删除该楼栋？（若存在房间/学生关联可能失败）"
-                confirm-button-text="确定"
-                cancel-button-text="取消"
-                @confirm="onDelete(row.id)"
-              >
-                <template #reference>
-                  <el-button link type="danger">删除</el-button>
-                </template>
-              </el-popconfirm>
-            </template>
-          </el-table-column>
-        </el-table>
-
-        <div style="margin-top: 16px; display: flex; justify-content: flex-end;">
-          <el-pagination
-            background
-            layout="prev, pager, next, total"
-            :total="total"
-            :page-size="query.size"
-            :current-page="query.current"
-            @current-change="onPageChange"
+    <el-card shadow="never" class="search-card">
+      <el-form :inline="true" :model="query" class="search-form">
+        <el-form-item label="楼栋名称">
+          <el-input
+            v-model="query.name"
+            placeholder="请输入楼栋名称"
+            style="width: 220px;"
+            clearable
+            :prefix-icon="Search"
+            @keyup.enter="onSearch"
           />
-        </div>
-      </el-card>
+        </el-form-item>
+        <el-form-item>
+          <el-button type="primary" :icon="Search" @click="onSearch">搜索</el-button>
+          <el-button :icon="RefreshRight" @click="onReset">重置</el-button>
+        </el-form-item>
+      </el-form>
+    </el-card>
 
-      <el-dialog
-        v-model="dialogVisible"
-        :title="dialogTitle"
-        width="520px"
-        destroy-on-close
+    <el-card shadow="never" class="table-card">
+      <el-table
+        v-loading="loading"
+        :data="tableData"
+        border
+        stripe
+        style="width: 100%;"
+        empty-text="暂无楼栋数据"
+        :header-cell-style="{ background: '#fafafa', color: '#303133', fontWeight: 600 }"
       >
-        <el-form
-          ref="formRef"
-          :model="form"
-          :rules="rules"
-          label-width="90px"
-          size="large"
-        >
-          <el-form-item label="楼栋名称" prop="name">
-            <el-input v-model="form.name" placeholder="如 1号楼" />
-          </el-form-item>
+        <el-table-column prop="name" label="楼栋名称" min-width="200">
+          <template #default="{ row }">
+            <div class="cell-building">
+              <el-icon color="#409eff"><OfficeBuilding /></el-icon>
+              <span>{{ row.name }}</span>
+            </div>
+          </template>
+        </el-table-column>
+        <el-table-column prop="location" label="位置" min-width="260">
+          <template #default="{ row }">
+            <span class="cell-location">{{ row.location || '-' }}</span>
+          </template>
+        </el-table-column>
+        <el-table-column label="操作" width="200" fixed="right" align="center">
+          <template #default="{ row }">
+            <el-button link type="primary" :icon="Edit" @click="openEdit(row)">编辑</el-button>
+            <el-popconfirm
+              title="确定删除该楼栋？关联的房间/学生可能失败"
+              confirm-button-text="确定"
+              cancel-button-text="取消"
+              @confirm="onDelete(row.id)"
+            >
+              <template #reference>
+                <el-button link type="danger" :icon="Delete">删除</el-button>
+              </template>
+            </el-popconfirm>
+          </template>
+        </el-table-column>
+      </el-table>
 
-          <el-form-item label="位置" prop="location">
-            <el-input v-model="form.location" placeholder="如 校区A-东侧" />
-          </el-form-item>
-        </el-form>
+      <div class="pagination-wrap">
+        <el-pagination
+          background
+          layout="prev, pager, next, total"
+          :total="total"
+          :page-size="query.size"
+          :current-page="query.current"
+          @current-change="onPageChange"
+        />
+      </div>
+    </el-card>
 
-        <template #footer>
-          <span class="dialog-footer">
-            <el-button @click="dialogVisible = false">取消</el-button>
-            <el-button type="primary" :loading="saving" @click="onSave">
-              保存
-            </el-button>
-          </span>
-        </template>
-      </el-dialog>
-    </el-main>
-  </el-container>
+    <el-dialog
+      v-model="dialogVisible"
+      :title="dialogTitle"
+      width="520px"
+      destroy-on-close
+      :close-on-click-modal="false"
+    >
+      <el-form
+        ref="formRef"
+        :model="form"
+        :rules="rules"
+        label-width="90px"
+        size="large"
+      >
+        <el-form-item label="楼栋名称" prop="name">
+          <el-input v-model="form.name" placeholder="如 1号楼" :prefix-icon="OfficeBuilding" />
+        </el-form-item>
+        <el-form-item label="位置" prop="location">
+          <el-input v-model="form.location" placeholder="如 校区A-东侧" :prefix-icon="Location" />
+        </el-form-item>
+      </el-form>
+
+      <template #footer>
+        <div class="dialog-footer">
+          <el-button @click="dialogVisible = false">取消</el-button>
+          <el-button type="primary" :loading="saving" :icon="Check" @click="onSave">保存</el-button>
+        </div>
+      </template>
+    </el-dialog>
+  </div>
 </template>
 
 <script setup lang="ts">
 import { computed, onMounted, reactive, ref } from 'vue'
 import type { FormInstance, FormRules } from 'element-plus'
 import { ElMessage } from 'element-plus'
+import {
+  OfficeBuilding, Search, RefreshRight,
+  Plus, Edit, Delete, Location, Check
+} from '@element-plus/icons-vue'
 import request, { type Result } from '@/utils/request'
 import type { DormBuilding, PageResult } from '@/api/dorm'
 
@@ -107,6 +130,7 @@ type BuildingForm = {
 
 const tableData = ref<DormBuilding[]>([])
 const total = ref(0)
+const loading = ref(false)
 
 const query = reactive({
   current: 1,
@@ -130,37 +154,40 @@ const rules = reactive<FormRules>({
 })
 
 const loadPage = async () => {
-  const res = await request.get<Result<PageResult<DormBuilding>>>('/dorm/buildings/page', {
-    params: {
-      current: query.current,
-      size: query.size,
-      name: query.name || undefined
-    }
-  })
-  const body = res.data
-  if (body.code !== 0) throw new Error(body.msg || '加载失败')
-  tableData.value = body.data.records || []
-  total.value = body.data.total || 0
+  loading.value = true
+  try {
+    const res = await request.get<Result<PageResult<DormBuilding>>>('/dorm/buildings/page', {
+      params: {
+        current: query.current,
+        size: query.size,
+        name: query.name || undefined
+      }
+    })
+    const body = res.data
+    if (body.code !== 0) throw new Error(body.msg || '加载失败')
+    tableData.value = body.data.records || []
+    total.value = body.data.total || 0
+  } catch (e: any) {
+    ElMessage.error(e?.message || '加载失败')
+  } finally {
+    loading.value = false
+  }
 }
 
 const onSearch = async () => {
   query.current = 1
-  try {
-    await loadPage()
-  } catch (e: any) {
-    ElMessage.error(e?.message || '搜索失败')
-  }
+  await loadPage()
 }
 
 const onReset = () => {
   query.name = ''
   query.current = 1
-  void onSearch()
+  void loadPage()
 }
 
 const onPageChange = (page: number) => {
   query.current = page
-  void loadPage().catch((e: any) => ElMessage.error(e?.message || '分页失败'))
+  void loadPage()
 }
 
 const openAdd = () => {
@@ -190,9 +217,9 @@ const onSave = () => {
     if (!valid) return
     try {
       saving.value = true
-      const payload = { 
-        name: form.value.name.trim(), 
-        location: form.value.location?.trim() 
+      const payload = {
+        name: form.value.name.trim(),
+        location: form.value.location?.trim()
       }
       if (form.value.id) {
         const res = await request.put<Result<null>>(`/dorm/buildings/${form.value.id}`, payload)
@@ -214,13 +241,53 @@ const onSave = () => {
 }
 
 onMounted(() => {
-  void loadPage().catch((e: any) => ElMessage.error(e?.message || '初始化失败'))
+  void loadPage()
 })
 </script>
 
 <style scoped>
-.toolbar {
-  margin-bottom: 8px;
+.page-wrap {
+  max-width: 1200px;
+}
+
+.page-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 16px;
+}
+
+.page-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 18px;
+  font-weight: 600;
+  color: #303133;
+}
+
+.search-card {
+  margin-bottom: 16px;
+}
+
+.table-card {
+  position: relative;
+}
+
+.cell-building {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.cell-location {
+  color: #606266;
+}
+
+.pagination-wrap {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 16px;
 }
 
 .dialog-footer {
@@ -229,4 +296,3 @@ onMounted(() => {
   gap: 12px;
 }
 </style>
-

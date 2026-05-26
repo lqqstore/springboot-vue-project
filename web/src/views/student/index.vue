@@ -1,28 +1,100 @@
 <template>
-  <div class="student-container">
-    <el-card>
-      <template #header>
-        <div class="card-header">
-          <span>学生管理</span>
-          <el-button type="primary" @click="handleAdd">添加学生</el-button>
-        </div>
-      </template>
-      
-      <el-table :data="studentList" style="width: 100%">
-        <el-table-column prop="id" label="ID" width="80" />
-        <el-table-column prop="userId" label="用户ID" width="100" />
-        <el-table-column prop="name" label="姓名" width="120" />
-        <el-table-column prop="gender" label="性别" width="80" />
-        <el-table-column prop="phone" label="电话" width="150" />
-        <el-table-column prop="major" label="专业" />
-        <el-table-column label="操作" width="250">
+  <div class="page-wrap">
+    <div class="page-header">
+      <div class="page-title">
+        <el-icon :size="22"><UserFilled /></el-icon>
+        <span>学生管理</span>
+      </div>
+      <el-button type="primary" :icon="Plus" @click="handleAdd">添加学生</el-button>
+    </div>
+
+    <el-card shadow="never" class="search-card">
+      <el-form :inline="true" :model="searchQuery" class="search-form">
+        <el-form-item label="姓名">
+          <el-input
+            v-model="searchQuery.name"
+            placeholder="搜索姓名"
+            style="width: 180px;"
+            clearable
+            :prefix-icon="Search"
+          />
+        </el-form-item>
+        <el-form-item label="专业">
+          <el-input
+            v-model="searchQuery.major"
+            placeholder="搜索专业"
+            style="width: 180px;"
+            clearable
+            :prefix-icon="Search"
+          />
+        </el-form-item>
+        <el-form-item>
+          <el-button type="primary" :icon="Search" @click="filteredList">搜索</el-button>
+          <el-button :icon="RefreshRight" @click="onReset">重置</el-button>
+        </el-form-item>
+      </el-form>
+    </el-card>
+
+    <el-card shadow="never" class="table-card">
+      <el-table
+        v-loading="loading"
+        :data="paginatedList"
+        border
+        stripe
+        style="width: 100%;"
+        empty-text="暂无学生数据"
+        :header-cell-style="{ background: '#fafafa', color: '#303133', fontWeight: 600 }"
+      >
+        <el-table-column prop="id" label="ID" width="70" />
+        <el-table-column prop="name" label="姓名" width="120">
           <template #default="{ row }">
-            <el-button size="small" @click="handleEdit(row)">编辑</el-button>
-            <el-button size="small" @click="handleAssignDorm(row)">分配宿舍</el-button>
-            <el-button size="small" type="danger" @click="handleDelete(row.id)">删除</el-button>
+            <div class="cell-student">
+              <el-avatar :size="28" :icon="UserFilled" />
+              <span>{{ row.name }}</span>
+            </div>
+          </template>
+        </el-table-column>
+        <el-table-column prop="gender" label="性别" width="80" align="center">
+          <template #default="{ row }">
+            <el-tag :type="row.gender === 'M' ? 'primary' : row.gender === 'F' ? 'danger' : 'info'" effect="light" size="small">
+              {{ row.gender === 'M' ? '男' : row.gender === 'F' ? '女' : '其他' }}
+            </el-tag>
+          </template>
+        </el-table-column>
+        <el-table-column prop="phone" label="电话" width="150" />
+        <el-table-column prop="major" label="专业" min-width="180">
+          <template #default="{ row }">
+            <span class="cell-major">{{ row.major }}</span>
+          </template>
+        </el-table-column>
+        <el-table-column label="操作" width="280" fixed="right" align="center">
+          <template #default="{ row }">
+            <el-button size="small" :icon="Edit" @click="handleEdit(row)">编辑</el-button>
+            <el-button size="small" type="success" :icon="Connection" @click="handleAssignDorm(row)">分配宿舍</el-button>
+            <el-popconfirm
+              title="确定删除该学生？"
+              confirm-button-text="确定"
+              cancel-button-text="取消"
+              @confirm="handleDelete(row.id)"
+            >
+              <template #reference>
+                <el-button size="small" type="danger" :icon="Delete">删除</el-button>
+              </template>
+            </el-popconfirm>
           </template>
         </el-table-column>
       </el-table>
+
+      <div class="pagination-wrap">
+        <el-pagination
+          v-model:current-page="currentPage"
+          v-model:page-size="pageSize"
+          background
+          layout="total, sizes, prev, pager, next"
+          :total="displayList.length"
+          :page-sizes="[10, 20, 50]"
+        />
+      </div>
     </el-card>
 
     <!-- 添加/编辑学生对话框 -->
@@ -30,6 +102,8 @@
       v-model="dialogVisible"
       :title="isEdit ? '编辑学生' : '添加学生'"
       width="500px"
+      destroy-on-close
+      :close-on-click-modal="false"
     >
       <el-form
         ref="formRef"
@@ -38,36 +112,30 @@
         label-width="80px"
       >
         <el-form-item label="用户ID" prop="userId" v-if="!isEdit">
-          <el-input v-model.number="form.userId" placeholder="请输入用户ID" />
+          <el-input v-model.number="form.userId" placeholder="请输入用户ID" :prefix-icon="User" />
         </el-form-item>
         <el-form-item label="姓名" prop="name">
-          <el-input v-model="form.name" placeholder="请输入姓名" />
+          <el-input v-model="form.name" placeholder="请输入姓名" :prefix-icon="Edit" />
         </el-form-item>
         <el-form-item label="性别" prop="gender">
-          <el-select v-model="form.gender" placeholder="请选择性别">
+          <el-select v-model="form.gender" placeholder="请选择性别" style="width: 100%;">
             <el-option label="男" value="M" />
             <el-option label="女" value="F" />
             <el-option label="其他" value="Other" />
           </el-select>
         </el-form-item>
         <el-form-item label="电话" prop="phone">
-          <el-input v-model="form.phone" placeholder="请输入电话" />
+          <el-input v-model="form.phone" placeholder="请输入电话" :prefix-icon="Phone" />
         </el-form-item>
         <el-form-item label="专业" prop="major">
-          <el-input v-model="form.major" placeholder="请输入专业" />
+          <el-input v-model="form.major" placeholder="请输入专业" :prefix-icon="Reading" />
         </el-form-item>
       </el-form>
       <template #footer>
-        <span class="dialog-footer">
+        <div class="dialog-footer">
           <el-button @click="dialogVisible = false">取消</el-button>
-          <el-button
-            type="primary"
-            :loading="loading"
-            @click="handleSubmit"
-          >
-            确定
-          </el-button>
-        </span>
+          <el-button type="primary" :loading="loading" :icon="Check" @click="handleSubmit">确定</el-button>
+        </div>
       </template>
     </el-dialog>
 
@@ -76,6 +144,8 @@
       v-model="assignDialogVisible"
       title="分配宿舍"
       width="500px"
+      destroy-on-close
+      :close-on-click-modal="false"
     >
       <el-form
         ref="assignFormRef"
@@ -83,11 +153,11 @@
         :rules="assignRules"
         label-width="80px"
       >
-        <el-form-item label="学生ID" disabled>
-          <el-input v-model.number="assignForm.studentId" />
+        <el-form-item label="学生ID">
+          <el-input v-model.number="assignForm.studentId" disabled />
         </el-form-item>
         <el-form-item label="选择房间" prop="roomId">
-          <el-select v-model.number="assignForm.roomId" placeholder="请选择房间" style="width: 100%;">
+          <el-select v-model.number="assignForm.roomId" placeholder="请选择房间" style="width: 100%;" :prefix-icon="House">
             <el-option
               v-for="room in availableRooms"
               :key="room.id"
@@ -106,25 +176,23 @@
         </el-form-item>
       </el-form>
       <template #footer>
-        <span class="dialog-footer">
+        <div class="dialog-footer">
           <el-button @click="assignDialogVisible = false">取消</el-button>
-          <el-button
-            type="primary"
-            :loading="assignLoading"
-            @click="handleAssignSubmit"
-          >
-            确定
-          </el-button>
-        </span>
+          <el-button type="primary" :loading="assignLoading" :icon="Check" @click="handleAssignSubmit">确定</el-button>
+        </div>
       </template>
     </el-dialog>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
-import { ElMessage, ElMessageBox } from 'element-plus'
+import { ref, onMounted, reactive, computed } from 'vue'
+import { ElMessage } from 'element-plus'
 import type { FormInstance, FormRules } from 'element-plus'
+import {
+  UserFilled, Plus, Search, RefreshRight, Edit, Delete, Check,
+  Connection, User, Phone, Reading, House
+} from '@element-plus/icons-vue'
 import { studentApi } from '@/api/student'
 import { getAvailableRooms, type DormRoomVO } from '@/api/dorm'
 
@@ -152,15 +220,23 @@ interface AssignForm {
 }
 
 const studentList = ref<Student[]>([])
+const loading = ref(false)
 const dialogVisible = ref(false)
 const assignDialogVisible = ref(false)
 const isEdit = ref(false)
 const currentId = ref(0)
 const formRef = ref<FormInstance | null>(null)
 const assignFormRef = ref<FormInstance | null>(null)
-const loading = ref(false)
 const assignLoading = ref(false)
 const availableRooms = ref<DormRoomVO[]>([])
+
+const currentPage = ref(1)
+const pageSize = ref(10)
+
+const searchQuery = reactive({
+  name: '',
+  major: ''
+})
 
 const form = ref<Form>({
   name: '',
@@ -175,8 +251,7 @@ const assignForm = ref<AssignForm>({
   checkInDate: ''
 })
 
-// 表单验证规则
-const rules = ref<FormRules>({
+const rules: FormRules = {
   userId: [
     { required: true, message: '请输入用户ID', trigger: 'blur' },
     { type: 'number', message: '用户ID必须是数字', trigger: 'blur' }
@@ -196,30 +271,55 @@ const rules = ref<FormRules>({
     { required: true, message: '请输入专业', trigger: 'blur' },
     { min: 2, max: 50, message: '专业长度在2-50个字符之间', trigger: 'blur' }
   ]
-})
+}
 
-// 宿舍分配表单验证规则
-const assignRules = ref<FormRules>({
+const assignRules: FormRules = {
   roomId: [
-    { required: true, message: '请输入房间ID', trigger: 'blur' },
-    { type: 'number', message: '房间ID必须是数字', trigger: 'blur' }
+    { required: true, message: '请选择房间', trigger: 'change' }
   ],
   checkInDate: [
     { required: true, message: '请选择入住日期', trigger: 'change' }
   ]
+}
+
+const displayList = computed(() => {
+  let list = studentList.value
+  if (searchQuery.name) {
+    list = list.filter(s => s.name.includes(searchQuery.name))
+  }
+  if (searchQuery.major) {
+    list = list.filter(s => s.major.includes(searchQuery.major))
+  }
+  return list
 })
 
-// 获取学生列表
+const paginatedList = computed(() => {
+  const start = (currentPage.value - 1) * pageSize.value
+  return displayList.value.slice(start, start + pageSize.value)
+})
+
 const getStudentList = async () => {
+  loading.value = true
   try {
     const response = await studentApi.getStudentList()
     studentList.value = response.data.data
   } catch (error) {
     ElMessage.error('获取学生列表失败')
+  } finally {
+    loading.value = false
   }
 }
 
-// 添加学生
+const filteredList = () => {
+  currentPage.value = 1
+}
+
+const onReset = () => {
+  searchQuery.name = ''
+  searchQuery.major = ''
+  currentPage.value = 1
+}
+
 const handleAdd = () => {
   isEdit.value = false
   currentId.value = 0
@@ -232,7 +332,6 @@ const handleAdd = () => {
   dialogVisible.value = true
 }
 
-// 编辑学生
 const handleEdit = (row: Student) => {
   isEdit.value = true
   currentId.value = row.id
@@ -245,7 +344,6 @@ const handleEdit = (row: Student) => {
   dialogVisible.value = true
 }
 
-// 提交表单
 const handleSubmit = async () => {
   if (!formRef.value) return
   formRef.value.validate(async (valid) => {
@@ -264,33 +362,24 @@ const handleSubmit = async () => {
       dialogVisible.value = false
       getStudentList()
     } catch (error: any) {
-      ElMessage.error(isEdit.value ? '编辑学生失败' : '添加学生失败')
+      ElMessage.error(error?.message || (isEdit.value ? '编辑学生失败' : '添加学生失败'))
     } finally {
       loading.value = false
     }
   })
 }
 
-// 删除学生
 const handleDelete = async (id: number) => {
   try {
-    await ElMessageBox.confirm('确定要删除该学生吗？', '删除确认', {
-      confirmButtonText: '确定',
-      cancelButtonText: '取消',
-      type: 'warning'
-    })
     const response = await studentApi.deleteStudent(id)
     if (response.data.code !== 0) throw new Error(response.data.msg || '删除失败')
     ElMessage.success('删除学生成功')
     getStudentList()
   } catch (error: any) {
-    if (error !== 'cancel') {
-      ElMessage.error('删除学生失败')
-    }
+    ElMessage.error(error?.message || '删除学生失败')
   }
 }
 
-// 加载可分配房间
 const loadAvailableRooms = async () => {
   try {
     const res = await getAvailableRooms()
@@ -302,7 +391,6 @@ const loadAvailableRooms = async () => {
   }
 }
 
-// 分配宿舍
 const handleAssignDorm = async (row: Student) => {
   await loadAvailableRooms()
   assignForm.value = {
@@ -313,7 +401,6 @@ const handleAssignDorm = async (row: Student) => {
   assignDialogVisible.value = true
 }
 
-// 提交宿舍分配
 const handleAssignSubmit = async () => {
   if (!assignFormRef.value) return
   assignFormRef.value.validate(async (valid) => {
@@ -325,33 +412,62 @@ const handleAssignSubmit = async () => {
       ElMessage.success('分配宿舍成功')
       assignDialogVisible.value = false
     } catch (error: any) {
-      ElMessage.error('分配宿舍失败')
+      ElMessage.error(error?.message || '分配宿舍失败')
     } finally {
       assignLoading.value = false
     }
   })
 }
 
-// 初始化
 onMounted(() => {
   getStudentList()
 })
 </script>
 
 <style scoped>
-.student-container {
-  padding: 20px;
+.page-wrap {
+  max-width: 1300px;
 }
 
-.card-header {
+.page-header {
   display: flex;
-  justify-content: space-between;
   align-items: center;
+  justify-content: space-between;
+  margin-bottom: 16px;
+}
+
+.page-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 18px;
+  font-weight: 600;
+  color: #303133;
+}
+
+.search-card {
+  margin-bottom: 16px;
+}
+
+.cell-student {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.cell-major {
+  color: #606266;
+}
+
+.pagination-wrap {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 16px;
 }
 
 .dialog-footer {
-  width: 100%;
   display: flex;
   justify-content: flex-end;
+  gap: 12px;
 }
 </style>
