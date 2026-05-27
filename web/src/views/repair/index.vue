@@ -32,7 +32,6 @@
         stripe
         style="width: 100%;"
         empty-text="暂无报修数据"
-        :header-cell-style="{ background: '#fafafa', color: '#303133', fontWeight: 600 }"
       >
         <el-table-column prop="id" label="ID" width="70" />
         <el-table-column prop="studentId" label="学生ID" width="100" />
@@ -206,8 +205,12 @@ const paginatedList = computed(() => {
 const getRepairList = async () => {
   loading.value = true
   try {
-    const response = await repairApi.getRepairOrderList()
-    repairList.value = response.data
+    const res = await repairApi.getRepairOrderList()
+    if (res.data.code === 0) {
+      repairList.value = res.data.data || []
+    } else {
+      ElMessage.error(res.data.msg || '获取报修列表失败')
+    }
   } catch (error) {
     ElMessage.error('获取报修列表失败')
   } finally {
@@ -247,24 +250,27 @@ const handleSubmit = async () => {
     try {
       saving.value = true
       if (isEdit.value) {
-        await repairApi.updateRepairOrder(currentId.value, {
+        const res = await repairApi.updateRepairOrder(currentId.value, {
           description: form.value.description,
           status: form.value.status,
           handlerId: form.value.handlerId
         })
+        if (res.data.code !== 0) throw new Error(res.data.msg || '编辑失败')
         ElMessage.success('编辑报修成功')
       } else {
-        await repairApi.addRepairOrder({
+        const res = await repairApi.addRepairOrder({
           studentId: form.value.studentId!,
           roomId: form.value.roomId!,
           description: form.value.description
         })
+        if (res.data.code !== 0) throw new Error(res.data.msg || '添加失败')
         ElMessage.success('添加报修成功')
       }
       dialogVisible.value = false
       getRepairList()
     } catch (error: any) {
-      ElMessage.error(error?.message || (isEdit.value ? '编辑报修失败' : '添加报修失败'))
+      const msg = error?.response?.data?.msg || error?.message
+      ElMessage.error(msg || (isEdit.value ? '编辑报修失败' : '添加报修失败'))
     } finally {
       saving.value = false
     }
@@ -273,11 +279,13 @@ const handleSubmit = async () => {
 
 const handleDelete = async (id: number) => {
   try {
-    await repairApi.deleteRepairOrder(id)
+    const res = await repairApi.deleteRepairOrder(id)
+    if (res.data.code !== 0) throw new Error(res.data.msg || '删除失败')
     ElMessage.success('删除报修成功')
     getRepairList()
   } catch (error: any) {
-    ElMessage.error(error?.message || '删除报修失败')
+    const msg = error?.response?.data?.msg || error?.message
+    ElMessage.error(msg || '删除报修失败')
   }
 }
 
@@ -313,7 +321,7 @@ onMounted(() => {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-bottom: 16px;
+  margin-bottom: 20px;
 }
 
 .page-title {
@@ -322,11 +330,15 @@ onMounted(() => {
   gap: 8px;
   font-size: 18px;
   font-weight: 600;
-  color: #303133;
+  color: var(--app-text-primary);
 }
 
 .search-card {
   margin-bottom: 16px;
+}
+
+.search-form :deep(.el-form-item) {
+  margin-bottom: 0;
 }
 
 .cell-desc {
@@ -336,7 +348,7 @@ onMounted(() => {
 }
 
 .cell-empty {
-  color: #c0c4cc;
+  color: var(--app-text-placeholder);
 }
 
 .pagination-wrap {

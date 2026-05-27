@@ -43,7 +43,6 @@
         stripe
         style="width: 100%;"
         empty-text="暂无学生数据"
-        :header-cell-style="{ background: '#fafafa', color: '#303133', fontWeight: 600 }"
       >
         <el-table-column prop="id" label="ID" width="70" />
         <el-table-column prop="name" label="姓名" width="120">
@@ -157,7 +156,7 @@
           <el-input v-model.number="assignForm.studentId" disabled />
         </el-form-item>
         <el-form-item label="选择房间" prop="roomId">
-          <el-select v-model.number="assignForm.roomId" placeholder="请选择房间" style="width: 100%;" :prefix-icon="House">
+          <el-select v-model="assignForm.roomId" placeholder="请选择房间" style="width: 100%;">
             <el-option
               v-for="room in availableRooms"
               :key="room.id"
@@ -170,6 +169,7 @@
           <el-date-picker
             v-model="assignForm.checkInDate"
             type="date"
+            value-format="YYYY-MM-DD"
             placeholder="选择入住日期"
             style="width: 100%"
           />
@@ -407,12 +407,19 @@ const handleAssignSubmit = async () => {
     if (!valid) return
     try {
       assignLoading.value = true
-      const response = await studentApi.assignDorm(assignForm.value)
+      const payload = {
+        studentId: assignForm.value.studentId,
+        roomId: Number(assignForm.value.roomId),
+        checkInDate: assignForm.value.checkInDate
+      }
+      const response = await studentApi.assignDorm(payload)
       if (response.data.code !== 0) throw new Error(response.data.msg || '分配失败')
       ElMessage.success('分配宿舍成功')
       assignDialogVisible.value = false
+      getStudentList()
     } catch (error: any) {
-      ElMessage.error(error?.message || '分配宿舍失败')
+      const msg = error?.response?.data?.msg || error?.message
+      ElMessage.error(msg || '分配宿舍失败')
     } finally {
       assignLoading.value = false
     }
@@ -433,7 +440,7 @@ onMounted(() => {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-bottom: 16px;
+  margin-bottom: 20px;
 }
 
 .page-title {
@@ -442,11 +449,15 @@ onMounted(() => {
   gap: 8px;
   font-size: 18px;
   font-weight: 600;
-  color: #303133;
+  color: var(--app-text-primary);
 }
 
 .search-card {
   margin-bottom: 16px;
+}
+
+.search-form :deep(.el-form-item) {
+  margin-bottom: 0;
 }
 
 .cell-student {
@@ -456,7 +467,7 @@ onMounted(() => {
 }
 
 .cell-major {
-  color: #606266;
+  color: var(--app-text-regular);
 }
 
 .pagination-wrap {

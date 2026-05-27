@@ -135,7 +135,7 @@ const onSubmit = () => {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: #e8e8e8;
   overflow: hidden;
 }
 
@@ -185,10 +185,10 @@ const onSubmit = () => {
   position: relative;
   width: 420px;
   padding: 40px 36px 32px;
-  background: rgba(255, 255, 255, 0.95);
-  border-radius: 16px;
-  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.15);
-  backdrop-filter: blur(10px);
+  background: var(--app-login-card-bg);
+  border-radius: 8px;
+  box-shadow: var(--app-shadow-login);
+  transition: background 0.3s ease;
 }
 
 .login-brand {
@@ -202,8 +202,8 @@ const onSubmit = () => {
   justify-content: center;
   width: 64px;
   height: 64px;
-  border-radius: 16px;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  border-radius: 6px;
+  background: var(--app-brand-primary);
   color: #fff;
   margin-bottom: 16px;
 }
@@ -212,13 +212,13 @@ const onSubmit = () => {
   margin: 0;
   font-size: 24px;
   font-weight: 700;
-  color: #303133;
+  color: var(--app-text-primary);
 }
 
 .brand-subtitle {
   margin: 6px 0 0;
   font-size: 13px;
-  color: #909399;
+  color: var(--app-text-secondary);
   letter-spacing: 1px;
 }
 
@@ -232,7 +232,9 @@ const onSubmit = () => {
 .login-footer {
   position: absolute;
   bottom: 16px;
-  color: rgba(255, 255, 255, 0.6);
+  color: var(--app-text-secondary);
   font-size: 12px;
 }
+
+
 </style>

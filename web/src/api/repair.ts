@@ -1,4 +1,4 @@
-import request from '@/utils/request'
+import request, { type Result } from '@/utils/request'
 
 interface RepairOrder {
   id: number
@@ -23,21 +23,21 @@ interface RepairOrderUpdateRequest {
 
 export const repairApi = {
   getRepairOrderList: () => {
-    return request.get<RepairOrder[]>('/repair/list')
+    return request.get<Result<RepairOrder[]>>('/repair/list')
   },
   getRepairOrdersByStudentId: (studentId: number) => {
-    return request.get<RepairOrder[]>(`/repair/student/${studentId}`)
+    return request.get<Result<RepairOrder[]>>(`/repair/student/${studentId}`)
   },
   getRepairOrderById: (id: number) => {
-    return request.get<RepairOrder>(`/repair/${id}`)
+    return request.get<Result<RepairOrder>>(`/repair/${id}`)
   },
   addRepairOrder: (data: RepairOrderAddRequest) => {
-    return request.post<RepairOrder>('/repair', data)
+    return request.post<Result<RepairOrder>>('/repair', data)
   },
   updateRepairOrder: (id: number, data: RepairOrderUpdateRequest) => {
-    return request.put<RepairOrder>(`/repair/${id}`, data)
+    return request.put<Result<RepairOrder>>(`/repair/${id}`, data)
   },
   deleteRepairOrder: (id: number) => {
-    return request.delete(`/repair/${id}`)
+    return request.delete<Result<null>>(`/repair/${id}`)
   }
 }

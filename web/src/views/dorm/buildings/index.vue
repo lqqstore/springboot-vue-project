@@ -35,7 +35,6 @@
         stripe
         style="width: 100%;"
         empty-text="暂无楼栋数据"
-        :header-cell-style="{ background: '#fafafa', color: '#303133', fontWeight: 600 }"
       >
         <el-table-column prop="name" label="楼栋名称" min-width="200">
           <template #default="{ row }">
@@ -254,7 +253,7 @@ onMounted(() => {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-bottom: 16px;
+  margin-bottom: 20px;
 }
 
 .page-title {
@@ -263,15 +262,15 @@ onMounted(() => {
   gap: 8px;
   font-size: 18px;
   font-weight: 600;
-  color: #303133;
+  color: var(--app-text-primary);
 }
 
 .search-card {
   margin-bottom: 16px;
 }
 
-.table-card {
-  position: relative;
+.search-form :deep(.el-form-item) {
+  margin-bottom: 0;
 }
 
 .cell-building {
@@ -281,7 +280,7 @@ onMounted(() => {
 }
 
 .cell-location {
-  color: #606266;
+  color: var(--app-text-regular);
 }
 
 .pagination-wrap {

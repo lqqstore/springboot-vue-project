@@ -50,7 +50,6 @@
         stripe
         style="width: 100%;"
         empty-text="暂无房间数据"
-        :header-cell-style="{ background: '#fafafa', color: '#303133', fontWeight: 600 }"
       >
         <el-table-column prop="roomNumber" label="房间号" width="120" />
         <el-table-column prop="buildingName" label="所属楼栋" width="180">
@@ -72,7 +71,7 @@
               <el-progress
                 :percentage="row.capacity ? Math.round(row.currentCount / row.capacity * 100) : 0"
                 :stroke-width="8"
-                :color="row.currentCount >= row.capacity ? '#f56c6c' : row.currentCount / row.capacity > 0.8 ? '#e6a23c' : '#67c23a'"
+                :color="row.currentCount >= row.capacity ? 'var(--app-color-danger)' : row.currentCount / row.capacity > 0.8 ? 'var(--app-color-warning)' : 'var(--app-color-success)'"
                 :show-text="false"
                 style="width: 80px;"
               />
@@ -91,8 +90,9 @@
             <span v-else class="cell-duty-empty">-</span>
           </template>
         </el-table-column>
-        <el-table-column label="操作" width="200" fixed="right" align="center">
+        <el-table-column label="操作" width="280" fixed="right" align="center">
           <template #default="{ row }">
+            <el-button link type="success" :icon="User" @click="handleViewStudents(row)">查看学生</el-button>
             <el-button link type="primary" :icon="Edit" @click="openEdit(row)">编辑</el-button>
             <el-popconfirm
               title="确定删除该房间？"
@@ -162,6 +162,34 @@
         </div>
       </template>
     </el-dialog>
+
+    <!-- 查看入住学生对话框 -->
+    <el-dialog
+      v-model="studentDialogVisible"
+      :title="`${currentRoomNumber} - 入住学生`"
+      width="650px"
+      destroy-on-close
+    >
+      <el-table
+        v-loading="loadingStudents"
+        :data="currentRoomStudents"
+        border
+        stripe
+        empty-text="该房间暂无学生入住"
+      >
+        <el-table-column prop="id" label="ID" width="70" />
+        <el-table-column prop="name" label="姓名" width="120" />
+        <el-table-column prop="gender" label="性别" width="80" align="center">
+          <template #default="{ row }">
+            <el-tag :type="row.gender === 'M' ? 'primary' : row.gender === 'F' ? 'danger' : 'info'" effect="light" size="small">
+              {{ row.gender === 'M' ? '男' : row.gender === 'F' ? '女' : '其他' }}
+            </el-tag>
+          </template>
+        </el-table-column>
+        <el-table-column prop="phone" label="电话" width="150" />
+        <el-table-column prop="major" label="专业" min-width="180" />
+      </el-table>
+    </el-dialog>
   </div>
 </template>
 
@@ -170,10 +198,11 @@ import { onMounted, reactive, ref, computed } from 'vue'
 import type { FormInstance, FormRules } from 'element-plus'
 import { ElMessage } from 'element-plus'
 import {
-  House, OfficeBuilding, Search, RefreshRight, Plus, Edit, Delete, Check, StarFilled
+  House, OfficeBuilding, Search, RefreshRight, Plus, Edit, Delete, Check, StarFilled, User
 } from '@element-plus/icons-vue'
 import type { DormBuilding, DormRoomVO, PageResult } from '@/api/dorm'
 import { createRoom, deleteRoom, getBuildingsList, getRoomsPage, updateRoom } from '@/api/dorm'
+import { studentApi } from '@/api/student'
 
 type RoomForm = {
   id?: number
@@ -190,6 +219,11 @@ const loading = ref(false)
 const dialogVisible = ref(false)
 const dialogTitle = computed(() => (form.value.id ? '编辑房间' : '新增房间'))
 const saving = ref(false)
+
+const studentDialogVisible = ref(false)
+const currentRoomStudents = ref<{ id: number; name: string; gender: string; phone: string; major: string }[]>([])
+const currentRoomNumber = ref('')
+const loadingStudents = ref(false)
 
 const total = ref(0)
 
@@ -283,6 +317,24 @@ const openEdit = (row: DormRoomVO) => {
   dialogVisible.value = true
 }
 
+const handleViewStudents = async (row: DormRoomVO) => {
+  currentRoomNumber.value = `${row.buildingName} - ${row.roomNumber}`
+  studentDialogVisible.value = true
+  loadingStudents.value = true
+  try {
+    const res = await studentApi.getStudentsByRoomId(row.id)
+    if (res.data.code === 0) {
+      currentRoomStudents.value = res.data.data || []
+    } else {
+      ElMessage.error(res.data.msg || '获取学生列表失败')
+    }
+  } catch (e: any) {
+    ElMessage.error(e?.message || '获取学生列表失败')
+  } finally {
+    loadingStudents.value = false
+  }
+}
+
 const onDelete = (id: number) => {
   return deleteRoom(id)
     .then((res) => {
@@ -348,7 +400,7 @@ onMounted(async () => {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-bottom: 16px;
+  margin-bottom: 20px;
 }
 
 .page-title {
@@ -357,11 +409,15 @@ onMounted(async () => {
   gap: 8px;
   font-size: 18px;
   font-weight: 600;
-  color: #303133;
+  color: var(--app-text-primary);
 }
 
 .search-card {
   margin-bottom: 16px;
+}
+
+.search-form :deep(.el-form-item) {
+  margin-bottom: 0;
 }
 
 .cell-building {
@@ -378,20 +434,20 @@ onMounted(async () => {
 
 .count-text {
   font-size: 13px;
-  color: #67c23a;
+  color: var(--app-color-success);
   font-weight: 500;
 }
 
 .count-text.count-full {
-  color: #f56c6c;
+  color: var(--app-color-danger);
 }
 
 .cell-duty {
-  color: #303133;
+  color: var(--app-text-primary);
 }
 
 .cell-duty-empty {
-  color: #c0c4cc;
+  color: var(--app-text-placeholder);
 }
 
 .pagination-wrap {

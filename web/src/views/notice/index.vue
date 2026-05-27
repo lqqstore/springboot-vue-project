@@ -34,7 +34,6 @@
         stripe
         style="width: 100%;"
         empty-text="暂无公告数据"
-        :header-cell-style="{ background: '#fafafa', color: '#303133', fontWeight: 600 }"
       >
         <el-table-column prop="id" label="ID" width="70" />
         <el-table-column prop="title" label="标题" min-width="200">
@@ -270,7 +269,7 @@ onMounted(() => {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-bottom: 16px;
+  margin-bottom: 20px;
 }
 
 .page-title {
@@ -279,11 +278,15 @@ onMounted(() => {
   gap: 8px;
   font-size: 18px;
   font-weight: 600;
-  color: #303133;
+  color: var(--app-text-primary);
 }
 
 .search-card {
   margin-bottom: 16px;
+}
+
+.search-form :deep(.el-form-item) {
+  margin-bottom: 0;
 }
 
 .cell-title {
@@ -293,7 +296,7 @@ onMounted(() => {
 }
 
 .cell-content {
-  color: #606266;
+  color: var(--app-text-regular);
 }
 
 .cell-time {
@@ -301,7 +304,7 @@ onMounted(() => {
   align-items: center;
   gap: 6px;
   justify-content: center;
-  color: #909399;
+  color: var(--app-text-secondary);
   font-size: 13px;
 }
 

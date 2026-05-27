@@ -126,13 +126,13 @@ const onLogout = () => {
 <style scoped>
 .dms-layout {
   height: 100vh;
-  background: #f0f2f5;
+  background: var(--app-bg);
 }
 
 .dms-aside {
-  background: linear-gradient(180deg, #1e1e2d 0%, #1a1a2e 100%);
+  background: linear-gradient(180deg, var(--app-sidebar-bg-start) 0%, var(--app-sidebar-bg-end) 100%);
   overflow: hidden;
-  transition: width 0.3s;
+  transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .aside-brand {
@@ -141,7 +141,7 @@ const onLogout = () => {
   align-items: center;
   justify-content: center;
   gap: 10px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  border-bottom: 1px solid var(--app-sidebar-divider);
   padding: 0 16px;
 }
 
@@ -151,8 +151,8 @@ const onLogout = () => {
   justify-content: center;
   width: 36px;
   height: 36px;
-  border-radius: 8px;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  border-radius: 4px;
+  background: var(--app-brand-primary);
   color: #fff;
   flex-shrink: 0;
 }
@@ -160,33 +160,36 @@ const onLogout = () => {
 .brand-text {
   font-size: 15px;
   font-weight: 700;
-  color: #fff;
+  color: var(--app-text-primary);
   white-space: nowrap;
   overflow: hidden;
 }
 
-/* element-plus dark menu overrides */
 .aside-menu {
   border-right: none !important;
   background: transparent !important;
 }
 .aside-menu :deep(.el-menu-item),
 .aside-menu :deep(.el-sub-menu__title) {
-  color: rgba(255, 255, 255, 0.65) !important;
+  color: var(--app-sidebar-text) !important;
+  border-radius: 8px;
+  margin: 2px 8px;
+  transition: all 0.25s ease;
 }
 .aside-menu :deep(.el-menu-item:hover),
 .aside-menu :deep(.el-sub-menu__title:hover) {
-  color: #fff !important;
-  background: rgba(255, 255, 255, 0.06) !important;
+  color: var(--app-sidebar-text-hover) !important;
+  background: var(--app-sidebar-hover-bg) !important;
 }
 .aside-menu :deep(.el-menu-item.is-active) {
-  color: #fff !important;
-  background: linear-gradient(90deg, rgba(102, 126, 234, 0.35), rgba(102, 126, 234, 0.12)) !important;
-  border-right: 3px solid #667eea;
-  border-radius: 0 4px 4px 0;
+  color: var(--app-sidebar-text-hover) !important;
+  background: var(--app-brand-gradient-h) !important;
+  border-right: 3px solid var(--app-brand-primary);
+  border-radius: 0 6px 6px 0;
+  margin-right: 4px;
 }
 .aside-menu :deep(.el-sub-menu.is-opened > .el-sub-menu__title) {
-  color: #fff !important;
+  color: var(--app-sidebar-text-hover) !important;
 }
 
 .dms-right {
@@ -195,12 +198,12 @@ const onLogout = () => {
 
 .dms-header {
   height: 56px;
-  background: #fff;
+  background: var(--app-bg-header);
   display: flex;
   align-items: center;
   justify-content: space-between;
   padding: 0 20px;
-  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.06);
+  box-shadow: var(--app-shadow-header);
   z-index: 10;
 }
 
@@ -212,11 +215,12 @@ const onLogout = () => {
 
 .collapse-btn {
   cursor: pointer;
-  color: #606266;
-  transition: color 0.2s;
+  color: var(--app-text-regular);
+  transition: color 0.2s, transform 0.2s;
 }
 .collapse-btn:hover {
-  color: #409eff;
+  color: var(--app-brand-primary);
+  transform: scale(1.15);
 }
 
 .header-right {
@@ -227,11 +231,11 @@ const onLogout = () => {
 
 .user-role {
   font-size: 13px;
-  color: #909399;
+  color: var(--app-text-secondary);
 }
 
 .dms-main {
-  background: #f0f2f5;
+  background: var(--app-bg);
   padding: 20px;
   overflow-y: auto;
 }
