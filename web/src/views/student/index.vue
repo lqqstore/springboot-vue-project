@@ -55,8 +55,8 @@
         </el-table-column>
         <el-table-column prop="gender" label="性别" width="80" align="center">
           <template #default="{ row }">
-            <el-tag :type="row.gender === 'M' ? 'primary' : row.gender === 'F' ? 'danger' : 'info'" effect="light" size="small">
-              {{ row.gender === 'M' ? '男' : row.gender === 'F' ? '女' : '其他' }}
+            <el-tag :type="row.gender === 'M' ? 'primary' : 'danger'" effect="light" size="small">
+              {{ row.gender === 'M' ? '男' : '女' }}
             </el-tag>
           </template>
         </el-table-column>
@@ -64,6 +64,12 @@
         <el-table-column prop="major" label="专业" min-width="180">
           <template #default="{ row }">
             <span class="cell-major">{{ row.major }}</span>
+          </template>
+        </el-table-column>
+        <el-table-column label="所在宿舍" width="180">
+          <template #default="{ row }">
+            <el-tag v-if="row.dormRoom" type="success" effect="light" size="small">{{ row.dormRoom }}</el-tag>
+            <span v-else style="color: #999;">未分配</span>
           </template>
         </el-table-column>
         <el-table-column label="操作" width="280" fixed="right" align="center">
@@ -110,9 +116,6 @@
         :rules="rules"
         label-width="80px"
       >
-        <el-form-item label="用户ID" prop="userId" v-if="!isEdit">
-          <el-input v-model.number="form.userId" placeholder="请输入用户ID" :prefix-icon="User" />
-        </el-form-item>
         <el-form-item label="姓名" prop="name">
           <el-input v-model="form.name" placeholder="请输入姓名" :prefix-icon="Edit" />
         </el-form-item>
@@ -120,7 +123,6 @@
           <el-select v-model="form.gender" placeholder="请选择性别" style="width: 100%;">
             <el-option label="男" value="M" />
             <el-option label="女" value="F" />
-            <el-option label="其他" value="Other" />
           </el-select>
         </el-form-item>
         <el-form-item label="电话" prop="phone">
@@ -141,7 +143,7 @@
     <!-- 分配宿舍对话框 -->
     <el-dialog
       v-model="assignDialogVisible"
-      title="分配宿舍"
+      :title="currentDormRoom ? '重新分配宿舍' : '分配宿舍'"
       width="500px"
       destroy-on-close
       :close-on-click-modal="false"
@@ -152,8 +154,11 @@
         :rules="assignRules"
         label-width="80px"
       >
-        <el-form-item label="学生ID">
-          <el-input v-model.number="assignForm.studentId" disabled />
+        <el-form-item label="学生">
+          <el-input :model-value="assignForm.studentName" disabled />
+        </el-form-item>
+        <el-form-item v-if="currentDormRoom" label="当前宿舍">
+          <el-tag type="warning">{{ currentDormRoom }}</el-tag>
         </el-form-item>
         <el-form-item label="选择房间" prop="roomId">
           <el-select v-model="assignForm.roomId" placeholder="请选择房间" style="width: 100%;">
@@ -191,7 +196,7 @@ import { ElMessage } from 'element-plus'
 import type { FormInstance, FormRules } from 'element-plus'
 import {
   UserFilled, Plus, Search, RefreshRight, Edit, Delete, Check,
-  Connection, User, Phone, Reading, House
+  Connection, Phone, Reading, House
 } from '@element-plus/icons-vue'
 import { studentApi } from '@/api/student'
 import { getAvailableRooms, type DormRoomVO } from '@/api/dorm'
@@ -206,7 +211,6 @@ interface Student {
 }
 
 interface Form {
-  userId?: number
   name: string
   gender: string
   phone: string
@@ -215,6 +219,7 @@ interface Form {
 
 interface AssignForm {
   studentId: number
+  studentName: string
   roomId: number
   checkInDate: string
 }
@@ -229,6 +234,7 @@ const formRef = ref<FormInstance | null>(null)
 const assignFormRef = ref<FormInstance | null>(null)
 const assignLoading = ref(false)
 const availableRooms = ref<DormRoomVO[]>([])
+const currentDormRoom = ref('')
 
 const currentPage = ref(1)
 const pageSize = ref(10)
@@ -247,15 +253,12 @@ const form = ref<Form>({
 
 const assignForm = ref<AssignForm>({
   studentId: 0,
+  studentName: '',
   roomId: 0,
   checkInDate: ''
 })
 
 const rules: FormRules = {
-  userId: [
-    { required: true, message: '请输入用户ID', trigger: 'blur' },
-    { type: 'number', message: '用户ID必须是数字', trigger: 'blur' }
-  ],
   name: [
     { required: true, message: '请输入姓名', trigger: 'blur' },
     { min: 2, max: 20, message: '姓名长度在2-20个字符之间', trigger: 'blur' }
@@ -393,8 +396,24 @@ const loadAvailableRooms = async () => {
 
 const handleAssignDorm = async (row: Student) => {
   await loadAvailableRooms()
+  currentDormRoom.value = ''
+  try {
+    const res = await studentApi.getStudentDormAssignment(row.id)
+    if (res.data.code === 0 && res.data.data) {
+      const dorm = res.data.data
+      const room = availableRooms.value.find(r => r.id === dorm.roomId)
+      if (room) {
+        currentDormRoom.value = `${room.buildingName} - ${room.roomNumber}`
+      } else {
+        currentDormRoom.value = `房间ID: ${dorm.roomId}`
+      }
+    }
+  } catch {
+    // no existing assignment
+  }
   assignForm.value = {
     studentId: row.id,
+    studentName: row.name,
     roomId: 0,
     checkInDate: new Date().toISOString().split('T')[0]
   }

@@ -4,8 +4,8 @@ import lombok.Data;
 
 @Data
 public class RepairOrderUpdateRequestDTO {
-    
+
     private String description;
     private Integer status;
-    private Long handlerId;
+    private String handlerName;
 }

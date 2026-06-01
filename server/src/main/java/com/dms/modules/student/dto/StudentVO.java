@@ -1,14 +1,14 @@
 package com.dms.modules.student.dto;
 
-import jakarta.validation.constraints.NotBlank;
 import lombok.Data;
 
 @Data
-public class StudentAddRequestDTO {
-
-    @NotBlank(message = "姓名不能为空")
+public class StudentVO {
+    private Long id;
+    private Long userId;
     private String name;
     private String gender;
     private String phone;
     private String major;
+    private String dormRoom;
 }

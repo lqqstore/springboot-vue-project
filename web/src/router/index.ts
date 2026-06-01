@@ -6,6 +6,7 @@ import DormBuildingsView from '@/views/dorm/buildings/index.vue'
 import NoticeView from '@/views/notice/index.vue'
 import RepairView from '@/views/repair/index.vue'
 import StudentView from '@/views/student/index.vue'
+import { useUserStore } from '@/stores/user'
 
 const routes: RouteRecordRaw[] = [
   {
@@ -57,15 +58,17 @@ const router = createRouter({
 })
 
 router.beforeEach((to) => {
-  const token = localStorage.getItem('dms_token')
+  const userStore = useUserStore()
+  // 确保 store 与 localStorage 同步
+  userStore.hydrate()
 
   // 已登录时不允许重复访问登录页
   if (to.path === '/login') {
-    return token ? '/' : undefined
+    return userStore.isLogin ? '/' : undefined
   }
 
   const requiresAuth = Boolean(to.meta.requiresAuth)
-  if (requiresAuth && !token) {
+  if (requiresAuth && !userStore.isLogin) {
     return '/login'
   }
 

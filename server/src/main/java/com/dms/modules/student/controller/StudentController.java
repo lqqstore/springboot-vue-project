@@ -4,6 +4,7 @@ import com.dms.common.Result;
 import com.dms.modules.student.dto.StudentAddRequestDTO;
 import com.dms.modules.student.dto.StudentDormAssignRequestDTO;
 import com.dms.modules.student.dto.StudentUpdateRequestDTO;
+import com.dms.modules.student.dto.StudentVO;
 import com.dms.modules.student.entity.Student;
 import com.dms.modules.student.entity.StudentDorm;
 import com.dms.modules.student.service.StudentService;
@@ -22,8 +23,8 @@ public class StudentController {
     private final StudentService studentService;
     
     @GetMapping("/list")
-    public Result<List<Student>> getStudentList() {
-        List<Student> students = studentService.getStudentList();
+    public Result<List<StudentVO>> getStudentList() {
+        List<StudentVO> students = studentService.getStudentList();
         return Result.success(students);
     }
     

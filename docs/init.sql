@@ -91,24 +91,19 @@ CREATE TABLE IF NOT EXISTS student_dorm (
 -- =========================
 CREATE TABLE IF NOT EXISTS repair_order (
   id BIGINT NOT NULL AUTO_INCREMENT,
-  student_id BIGINT NOT NULL COMMENT '学生ID',
+  student_id BIGINT DEFAULT NULL COMMENT '学生ID（可为空，管理员代报修时无学生）',
+  reporter_name VARCHAR(100) DEFAULT NULL COMMENT '报修人姓名',
   room_id BIGINT NOT NULL COMMENT '房间ID',
   description TEXT NOT NULL COMMENT '报修描述',
   status TINYINT NOT NULL DEFAULT 0 COMMENT '状态（0待处理/1处理中/2已完成）',
-  handler_id BIGINT DEFAULT NULL COMMENT '处理人ID（关联 sys_user）',
+  handler_name VARCHAR(100) DEFAULT NULL COMMENT '处理人姓名（修理工）',
   PRIMARY KEY (id),
   KEY idx_repair_order_student_id (student_id),
   KEY idx_repair_order_room_id (room_id),
   KEY idx_repair_order_status (status),
-  CONSTRAINT fk_repair_order_student
-    FOREIGN KEY (student_id) REFERENCES student (id)
-    ON UPDATE CASCADE ON DELETE RESTRICT,
   CONSTRAINT fk_repair_order_room
     FOREIGN KEY (room_id) REFERENCES dorm_room (id)
-    ON UPDATE CASCADE ON DELETE RESTRICT,
-  CONSTRAINT fk_repair_order_handler
-    FOREIGN KEY (handler_id) REFERENCES sys_user (id)
-    ON UPDATE CASCADE ON DELETE SET NULL
+    ON UPDATE CASCADE ON DELETE RESTRICT
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 -- =========================

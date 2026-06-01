@@ -2,11 +2,16 @@ package com.dms.modules.student.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import com.dms.modules.auth.entity.SysUser;
+import com.dms.modules.auth.mapper.SysUserMapper;
+import com.dms.modules.dorm.entity.DormBuilding;
 import com.dms.modules.dorm.entity.DormRoom;
+import com.dms.modules.dorm.mapper.DormBuildingMapper;
 import com.dms.modules.dorm.mapper.DormRoomMapper;
 import com.dms.modules.student.dto.StudentAddRequestDTO;
 import com.dms.modules.student.dto.StudentDormAssignRequestDTO;
 import com.dms.modules.student.dto.StudentUpdateRequestDTO;
+import com.dms.modules.student.dto.StudentVO;
 import com.dms.modules.student.entity.Student;
 import com.dms.modules.student.entity.StudentDorm;
 import com.dms.modules.student.mapper.StudentDormMapper;
@@ -16,6 +21,8 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -24,10 +31,64 @@ public class StudentServiceImpl extends ServiceImpl<StudentMapper, Student> impl
     private final StudentMapper studentMapper;
     private final StudentDormMapper studentDormMapper;
     private final DormRoomMapper dormRoomMapper;
+    private final DormBuildingMapper dormBuildingMapper;
+    private final SysUserMapper sysUserMapper;
     
     @Override
-    public List<Student> getStudentList() {
-        return studentMapper.selectList(null);
+    public List<StudentVO> getStudentList() {
+        List<Student> students = studentMapper.selectList(null);
+
+        List<StudentDorm> allDorms = studentDormMapper.selectList(null);
+        Map<Long, Long> studentRoomMap = allDorms.stream()
+                .collect(Collectors.toMap(StudentDorm::getStudentId, StudentDorm::getRoomId));
+
+        List<Long> roomIds = allDorms.stream()
+                .map(StudentDorm::getRoomId)
+                .distinct()
+                .toList();
+        Map<Long, DormRoom> roomMap = Map.of();
+        if (!roomIds.isEmpty()) {
+            roomMap = dormRoomMapper.selectBatchIds(roomIds)
+                    .stream()
+                    .collect(Collectors.toMap(DormRoom::getId, r -> r));
+        }
+
+        final Map<Long, DormRoom> finalRoomMap = roomMap;
+
+        List<Long> buildingIds = finalRoomMap.values().stream()
+                .map(DormRoom::getBuildingId)
+                .distinct()
+                .toList();
+        Map<Long, String> buildingNameMap = Map.of();
+        if (!buildingIds.isEmpty()) {
+            buildingNameMap = dormBuildingMapper.selectBatchIds(buildingIds)
+                    .stream()
+                    .collect(Collectors.toMap(DormBuilding::getId, DormBuilding::getName));
+        }
+
+        final Map<Long, String> finalBuildingNameMap = buildingNameMap;
+
+        return students.stream().map(student -> {
+            StudentVO vo = new StudentVO();
+            vo.setId(student.getId());
+            vo.setUserId(student.getUserId());
+            vo.setName(student.getName());
+            vo.setGender(student.getGender());
+            vo.setPhone(student.getPhone());
+            vo.setMajor(student.getMajor());
+
+            Long roomId = studentRoomMap.get(student.getId());
+            if (roomId != null) {
+                DormRoom room = finalRoomMap.get(roomId);
+                if (room != null) {
+                    String buildingName = finalBuildingNameMap.getOrDefault(room.getBuildingId(), "");
+                    vo.setDormRoom(buildingName + " - " + room.getRoomNumber());
+                } else {
+                    vo.setDormRoom("房间ID:" + roomId);
+                }
+            }
+            return vo;
+        }).toList();
     }
     
     @Override
@@ -44,8 +105,15 @@ public class StudentServiceImpl extends ServiceImpl<StudentMapper, Student> impl
     
     @Override
     public Student addStudent(StudentAddRequestDTO dto) {
+        SysUser sysUser = new SysUser();
+        sysUser.setUsername("stu_" + System.currentTimeMillis());
+        sysUser.setPassword(cn.hutool.crypto.digest.BCrypt.hashpw("123456"));
+        sysUser.setRole("STUDENT");
+        sysUser.setStatus(1);
+        sysUserMapper.insert(sysUser);
+
         Student student = new Student();
-        student.setUserId(dto.getUserId());
+        student.setUserId(sysUser.getId());
         student.setName(dto.getName());
         student.setGender(dto.getGender());
         student.setPhone(dto.getPhone());
@@ -88,34 +156,48 @@ public class StudentServiceImpl extends ServiceImpl<StudentMapper, Student> impl
     
     @Override
     public StudentDorm assignDorm(StudentDormAssignRequestDTO dto) {
-        // Check if student already has a dorm assignment
+        Student student = studentMapper.selectById(dto.getStudentId());
+        if (student == null) {
+            throw new IllegalArgumentException("学生不存在");
+        }
+
+        DormRoom newRoom = dormRoomMapper.selectById(dto.getRoomId());
+        if (newRoom == null) {
+            throw new IllegalArgumentException("房间不存在");
+        }
+
         LambdaQueryWrapper<StudentDorm> existingWrapper = new LambdaQueryWrapper<>();
         existingWrapper.eq(StudentDorm::getStudentId, dto.getStudentId());
         StudentDorm existingAssignment = studentDormMapper.selectOne(existingWrapper);
+
         if (existingAssignment != null) {
-            throw new IllegalArgumentException("Student already has a dorm assignment");
+            if (existingAssignment.getRoomId().equals(dto.getRoomId())) {
+                throw new IllegalArgumentException("该学生已在此房间，无需重复分配");
+            }
+            DormRoom oldRoom = dormRoomMapper.selectById(existingAssignment.getRoomId());
+            if (oldRoom != null && oldRoom.getCurrentCount() > 0) {
+                oldRoom.setCurrentCount(oldRoom.getCurrentCount() - 1);
+                dormRoomMapper.updateById(oldRoom);
+            }
+            studentDormMapper.delete(existingWrapper);
         }
-        
-        // Check if room exists and has capacity
-        DormRoom room = dormRoomMapper.selectById(dto.getRoomId());
-        if (room == null) {
-            throw new IllegalArgumentException("Room not found");
+
+        long currentCount = studentDormMapper.selectCount(
+                new LambdaQueryWrapper<StudentDorm>().eq(StudentDorm::getRoomId, dto.getRoomId())
+        );
+        if (currentCount >= newRoom.getCapacity()) {
+            throw new IllegalArgumentException("房间已满");
         }
-        if (room.getCurrentCount() >= room.getCapacity()) {
-            throw new IllegalArgumentException("Room is full");
-        }
-        
-        // Create new assignment
+
         StudentDorm studentDorm = new StudentDorm();
         studentDorm.setStudentId(dto.getStudentId());
         studentDorm.setRoomId(dto.getRoomId());
         studentDorm.setCheckInDate(dto.getCheckInDate());
         studentDormMapper.insert(studentDorm);
-        
-        // Increase room current count
-        room.setCurrentCount(room.getCurrentCount() + 1);
-        dormRoomMapper.updateById(room);
-        
+
+        newRoom.setCurrentCount((int) currentCount + 1);
+        dormRoomMapper.updateById(newRoom);
+
         return studentDorm;
     }
     

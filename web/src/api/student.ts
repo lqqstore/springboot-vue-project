@@ -7,6 +7,7 @@ interface Student {
   gender: string
   phone: string
   major: string
+  dormRoom?: string
 }
 
 interface StudentDorm {
@@ -17,7 +18,6 @@ interface StudentDorm {
 }
 
 interface StudentAddRequest {
-  userId: number
   name: string
   gender: string
   phone: string

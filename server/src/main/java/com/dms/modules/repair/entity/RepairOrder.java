@@ -22,6 +22,9 @@ public class RepairOrder implements Serializable {
     @TableField("student_id")
     private Long studentId;
 
+    @TableField("reporter_name")
+    private String reporterName;
+
     @TableField("room_id")
     private Long roomId;
 
@@ -29,7 +32,7 @@ public class RepairOrder implements Serializable {
 
     private Integer status;
 
-    @TableField("handler_id")
-    private Long handlerId;
+    @TableField("handler_name")
+    private String handlerName;
 }
 

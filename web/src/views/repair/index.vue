@@ -34,8 +34,16 @@
         empty-text="暂无报修数据"
       >
         <el-table-column prop="id" label="ID" width="70" />
-        <el-table-column prop="studentId" label="学生ID" width="100" />
-        <el-table-column prop="roomId" label="房间ID" width="100" />
+        <el-table-column label="报修位置" width="200">
+          <template #default="{ row }">
+            <span>{{ row.buildingName }} - {{ row.roomNumber }}</span>
+          </template>
+        </el-table-column>
+        <el-table-column label="报修人" width="120">
+          <template #default="{ row }">
+            <span>{{ row.reporterName || row.studentName || '-' }}</span>
+          </template>
+        </el-table-column>
         <el-table-column prop="description" label="报修描述" min-width="220" show-overflow-tooltip>
           <template #default="{ row }">
             <div class="cell-desc">
@@ -51,9 +59,9 @@
             </el-tag>
           </template>
         </el-table-column>
-        <el-table-column prop="handlerId" label="处理人ID" width="120" align="center">
+        <el-table-column label="处理人" width="120" align="center">
           <template #default="{ row }">
-            <span :class="{ 'cell-empty': !row.handlerId }">{{ row.handlerId || '未分配' }}</span>
+            <span :class="{ 'cell-empty': !row.handlerName }">{{ row.handlerName || '未分配' }}</span>
           </template>
         </el-table-column>
         <el-table-column label="操作" width="200" fixed="right" align="center">
@@ -94,11 +102,28 @@
       :close-on-click-modal="false"
     >
       <el-form ref="formRef" :model="form" :rules="formRules" label-width="90px">
-        <el-form-item label="学生ID" prop="studentId" v-if="!isEdit">
-          <el-input v-model.number="form.studentId" placeholder="请输入学生ID" :prefix-icon="User" />
+        <el-form-item label="报修人" prop="reporterName" v-if="!isEdit">
+          <el-input v-model="form.reporterName" placeholder="请输入报修人姓名" />
         </el-form-item>
-        <el-form-item label="房间ID" prop="roomId" v-if="!isEdit">
-          <el-input v-model.number="form.roomId" placeholder="请输入房间ID" :prefix-icon="House" />
+        <el-form-item label="楼栋" prop="buildingId" v-if="!isEdit">
+          <el-select v-model="form.buildingId" placeholder="请选择楼栋" style="width: 100%;" @change="onBuildingChange">
+            <el-option
+              v-for="b in buildings"
+              :key="b.id"
+              :label="b.name"
+              :value="b.id"
+            />
+          </el-select>
+        </el-form-item>
+        <el-form-item label="房间" prop="roomId" v-if="!isEdit">
+          <el-select v-model="form.roomId" placeholder="请先选择楼栋" style="width: 100%;" :disabled="!form.buildingId">
+            <el-option
+              v-for="r in filteredRooms"
+              :key="r.id"
+              :label="r.roomNumber"
+              :value="r.id"
+            />
+          </el-select>
         </el-form-item>
         <el-form-item label="报修描述" prop="description">
           <el-input
@@ -115,8 +140,8 @@
             <el-option label="已完成" :value="2" />
           </el-select>
         </el-form-item>
-        <el-form-item label="处理人ID" v-if="isEdit">
-          <el-input v-model.number="form.handlerId" placeholder="请输入处理人ID" :prefix-icon="Avatar" />
+        <el-form-item label="处理人" v-if="isEdit">
+          <el-input v-model="form.handlerName" placeholder="请输入修理工姓名" :prefix-icon="Avatar" />
         </el-form-item>
       </el-form>
       <template #footer>
@@ -135,25 +160,30 @@ import { ElMessage } from 'element-plus'
 import type { FormInstance, FormRules } from 'element-plus'
 import {
   Tools, Plus, Search, RefreshRight, Edit, Delete, Check,
-  User, House, Avatar, Document
+  Avatar, Document
 } from '@element-plus/icons-vue'
 import { repairApi } from '@/api/repair'
+import { getBuildingsList, getRoomsPage, type DormBuilding, type DormRoomVO, type PageResult } from '@/api/dorm'
 
 interface RepairOrder {
   id: number
-  studentId: number
+  studentId: number | null
+  studentName: string
   roomId: number
+  buildingName: string
+  roomNumber: string
   description: string
   status: number
-  handlerId: number | null
+  handlerName: string
 }
 
 interface Form {
-  studentId?: number
+  reporterName: string
+  buildingId?: number
   roomId?: number
   description: string
   status?: number
-  handlerId?: number
+  handlerName?: string
 }
 
 const repairList = ref<RepairOrder[]>([])
@@ -164,6 +194,9 @@ const saving = ref(false)
 const currentId = ref(0)
 const formRef = ref<FormInstance | null>(null)
 
+const buildings = ref<DormBuilding[]>([])
+const allRooms = ref<DormRoomVO[]>([])
+
 const currentPage = ref(1)
 const pageSize = ref(10)
 
@@ -172,23 +205,30 @@ const searchQuery = reactive({
 })
 
 const form = ref<Form>({
+  reporterName: '',
   description: ''
 })
 
 const formRules: FormRules = {
-  studentId: [
-    { required: true, message: '请输入学生ID', trigger: 'blur' },
-    { type: 'number', message: '学生ID必须是数字', trigger: 'blur' }
+  reporterName: [
+    { required: true, message: '请输入报修人', trigger: 'blur' }
+  ],
+  buildingId: [
+    { required: true, message: '请选择楼栋', trigger: 'change' }
   ],
   roomId: [
-    { required: true, message: '请输入房间ID', trigger: 'blur' },
-    { type: 'number', message: '房间ID必须是数字', trigger: 'blur' }
+    { required: true, message: '请选择房间', trigger: 'change' }
   ],
   description: [
     { required: true, message: '请输入报修描述', trigger: 'blur' },
     { min: 2, max: 500, message: '描述长度在2-500个字符之间', trigger: 'blur' }
   ]
 }
+
+const filteredRooms = computed(() => {
+  if (!form.value.buildingId) return []
+  return allRooms.value.filter(r => r.buildingId === form.value.buildingId)
+})
 
 const displayList = computed(() => {
   if (searchQuery.status !== undefined && searchQuery.status !== null) {
@@ -202,6 +242,29 @@ const paginatedList = computed(() => {
   return displayList.value.slice(start, start + pageSize.value)
 })
 
+const loadBuildings = async () => {
+  try {
+    const res = await getBuildingsList()
+    if (res.data.code === 0) {
+      buildings.value = res.data.data || []
+    }
+  } catch { /* ignore */ }
+}
+
+const loadAllRooms = async () => {
+  try {
+    const res = await getRoomsPage({ current: 1, size: 1000 })
+    if (res.data.code === 0) {
+      const page = res.data.data as PageResult<DormRoomVO>
+      allRooms.value = page.records || []
+    }
+  } catch { /* ignore */ }
+}
+
+const onBuildingChange = () => {
+  form.value.roomId = undefined
+}
+
 const getRepairList = async () => {
   loading.value = true
   try {
@@ -211,7 +274,7 @@ const getRepairList = async () => {
     } else {
       ElMessage.error(res.data.msg || '获取报修列表失败')
     }
-  } catch (error) {
+  } catch {
     ElMessage.error('获取报修列表失败')
   } finally {
     loading.value = false
@@ -223,12 +286,16 @@ const onReset = () => {
   currentPage.value = 1
 }
 
-const handleAdd = () => {
+const handleAdd = async () => {
   isEdit.value = false
   currentId.value = 0
   form.value = {
+    reporterName: '',
+    buildingId: undefined,
+    roomId: undefined,
     description: ''
   }
+  await Promise.all([loadBuildings(), loadAllRooms()])
   dialogVisible.value = true
 }
 
@@ -238,7 +305,7 @@ const handleEdit = (row: RepairOrder) => {
   form.value = {
     description: row.description,
     status: row.status,
-    handlerId: row.handlerId || undefined
+    handlerName: row.handlerName || undefined
   }
   dialogVisible.value = true
 }
@@ -253,13 +320,13 @@ const handleSubmit = async () => {
         const res = await repairApi.updateRepairOrder(currentId.value, {
           description: form.value.description,
           status: form.value.status,
-          handlerId: form.value.handlerId
+          handlerName: form.value.handlerName
         })
         if (res.data.code !== 0) throw new Error(res.data.msg || '编辑失败')
         ElMessage.success('编辑报修成功')
       } else {
         const res = await repairApi.addRepairOrder({
-          studentId: form.value.studentId!,
+          reporterName: form.value.reporterName,
           roomId: form.value.roomId!,
           description: form.value.description
         })
@@ -290,20 +357,12 @@ const handleDelete = async (id: number) => {
 }
 
 const getStatusText = (status: number) => {
-  const statusMap: Record<number, string> = {
-    0: '待处理',
-    1: '处理中',
-    2: '已完成'
-  }
+  const statusMap: Record<number, string> = { 0: '待处理', 1: '处理中', 2: '已完成' }
   return statusMap[status] || '未知'
 }
 
 const getStatusTagType = (status: number): 'info' | 'warning' | 'success' | 'danger' => {
-  const typeMap: Record<number, 'info' | 'warning' | 'success' | 'danger'> = {
-    0: 'info',
-    1: 'warning',
-    2: 'success'
-  }
+  const typeMap: Record<number, 'info' | 'warning' | 'success' | 'danger'> = { 0: 'info', 1: 'warning', 2: 'success' }
   return typeMap[status] || 'info'
 }
 

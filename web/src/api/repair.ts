@@ -2,15 +2,19 @@ import request, { type Result } from '@/utils/request'
 
 interface RepairOrder {
   id: number
-  studentId: number
+  studentId: number | null
+  studentName: string
+  reporterName: string
   roomId: number
+  buildingName: string
+  roomNumber: string
   description: string
   status: number
-  handlerId: number | null
+  handlerName: string
 }
 
 interface RepairOrderAddRequest {
-  studentId: number
+  reporterName: string
   roomId: number
   description: string
 }
@@ -18,15 +22,12 @@ interface RepairOrderAddRequest {
 interface RepairOrderUpdateRequest {
   description?: string
   status?: number
-  handlerId?: number
+  handlerName?: string
 }
 
 export const repairApi = {
   getRepairOrderList: () => {
     return request.get<Result<RepairOrder[]>>('/repair/list')
-  },
-  getRepairOrdersByStudentId: (studentId: number) => {
-    return request.get<Result<RepairOrder[]>>(`/repair/student/${studentId}`)
   },
   getRepairOrderById: (id: number) => {
     return request.get<Result<RepairOrder>>(`/repair/${id}`)

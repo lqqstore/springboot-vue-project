@@ -13,10 +13,16 @@ public class SaTokenConfig implements WebMvcConfigurer {
     public void addInterceptors(InterceptorRegistry registry) {
         // 添加 Sa-Token 拦截器，配置认证规则
         registry.addInterceptor(new SaInterceptor(handler -> {
-            // 其他接口需要登录
             StpUtil.checkLogin();
         }))
         .addPathPatterns("/**")
-        .excludePathPatterns("/auth/login"); // 排除登录接口
+        .excludePathPatterns(
+            "/auth/login",
+            "/doc.html",
+            "/webjars/**",
+            "/v3/api-docs/**",
+            "/swagger-resources/**",
+            "/favicon.ico"
+        );
     }
 }
