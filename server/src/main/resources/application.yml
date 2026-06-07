@@ -14,6 +14,9 @@ spring:
   # 具体包扫描与类型别名会在后续 Phase2/Phase3 中继续完善
   jackson:
     time-zone: Asia/Shanghai
+    date-format: yyyy-MM-dd HH:mm:ss
+    serialization:
+      write-dates-as-timestamps: false
 
 mybatis-plus:
   mapper-locations: classpath:/mapper/**/*.xml
@@ -22,7 +25,6 @@ mybatis-plus:
 # Sa-Token（后续 Phase2 会进一步完善鉴权策略）
 sa-token:
   token-name: Authorization
-  header: Authorization
 
 # Knife4j（Swagger）开关
 knife4j:

@@ -1,5 +1,6 @@
 package com.dms.modules.auth.service;
 
+import cn.dev33.satoken.stp.StpUtil;
 import cn.hutool.crypto.digest.BCrypt;
 import com.dms.modules.auth.dto.LoginRequestDTO;
 import com.dms.modules.auth.dto.LoginResponseDTO;
@@ -9,6 +10,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
+import org.mockito.MockedStatic;
 import org.mockito.MockitoAnnotations;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -29,33 +31,38 @@ class AuthServiceTest {
     
     @Test
     void testLogin_Success() {
-        // 准备测试数据
-        String username = "admin";
-        String password = "admin123456";
-        String hashedPassword = BCrypt.hashpw(password, BCrypt.gensalt());
-        
-        SysUser user = new SysUser();
-        user.setId(1L);
-        user.setUsername(username);
-        user.setPassword(hashedPassword);
-        user.setRole("ADMIN");
-        user.setStatus(1);
-        
-        // 模拟 SysUserMapper 的行为
-        when(sysUserMapper.selectOne(any())).thenReturn(user);
-        
-        // 执行登录操作
-        LoginRequestDTO requestDTO = new LoginRequestDTO();
-        requestDTO.setUsername(username);
-        requestDTO.setPassword(password);
-        
-        LoginResponseDTO responseDTO = authService.login(requestDTO);
-        
-        // 验证结果
-        assertNotNull(responseDTO);
-        assertNotNull(responseDTO.getToken());
-        assertEquals(user.getId(), responseDTO.getUserId());
-        assertEquals(user.getRole(), responseDTO.getRole());
+        // Mock Sa-Token 静态方法（单元测试无 Web 上下文）
+        try (MockedStatic<StpUtil> stpUtilMock = mockStatic(StpUtil.class)) {
+            stpUtilMock.when(StpUtil::getTokenValue).thenReturn("mock-token-value");
+
+            // 准备测试数据
+            String username = "admin";
+            String password = "admin123456";
+            String hashedPassword = BCrypt.hashpw(password, BCrypt.gensalt());
+
+            SysUser user = new SysUser();
+            user.setId(1L);
+            user.setUsername(username);
+            user.setPassword(hashedPassword);
+            user.setRole("ADMIN");
+            user.setStatus(1);
+
+            // 模拟 SysUserMapper 的行为
+            when(sysUserMapper.selectOne(any())).thenReturn(user);
+
+            // 执行登录操作
+            LoginRequestDTO requestDTO = new LoginRequestDTO();
+            requestDTO.setUsername(username);
+            requestDTO.setPassword(password);
+
+            LoginResponseDTO responseDTO = authService.login(requestDTO);
+
+            // 验证结果
+            assertNotNull(responseDTO);
+            assertNotNull(responseDTO.getToken());
+            assertEquals(user.getId(), responseDTO.getUserId());
+            assertEquals(user.getRole(), responseDTO.getRole());
+        }
     }
     
     @Test

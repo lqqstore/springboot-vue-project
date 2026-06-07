@@ -19,6 +19,7 @@ import com.dms.modules.student.mapper.StudentMapper;
 import com.dms.modules.student.service.StudentService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 import java.util.Map;
@@ -104,9 +105,10 @@ public class StudentServiceImpl extends ServiceImpl<StudentMapper, Student> impl
     }
     
     @Override
+    @Transactional
     public Student addStudent(StudentAddRequestDTO dto) {
         SysUser sysUser = new SysUser();
-        sysUser.setUsername("stu_" + System.currentTimeMillis());
+        sysUser.setUsername("stu_" + System.currentTimeMillis() + "_" + (int)(Math.random() * 10000));
         sysUser.setPassword(cn.hutool.crypto.digest.BCrypt.hashpw("123456"));
         sysUser.setRole("STUDENT");
         sysUser.setStatus(1);
@@ -137,6 +139,7 @@ public class StudentServiceImpl extends ServiceImpl<StudentMapper, Student> impl
     }
     
     @Override
+    @Transactional
     public void deleteStudent(Long id) {
         // Remove dorm assignment if exists
         LambdaQueryWrapper<StudentDorm> dormWrapper = new LambdaQueryWrapper<>();
@@ -151,10 +154,16 @@ public class StudentServiceImpl extends ServiceImpl<StudentMapper, Student> impl
             }
             studentDormMapper.delete(dormWrapper);
         }
+        // 删除关联的 sys_user 记录，防止孤儿数据
+        Student student = studentMapper.selectById(id);
+        if (student != null && student.getUserId() != null) {
+            sysUserMapper.deleteById(student.getUserId());
+        }
         studentMapper.deleteById(id);
     }
     
     @Override
+    @Transactional
     public StudentDorm assignDorm(StudentDormAssignRequestDTO dto) {
         Student student = studentMapper.selectById(dto.getStudentId());
         if (student == null) {
